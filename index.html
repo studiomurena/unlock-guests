@@ -9,6 +9,7 @@
     <link rel="preload" as="image" href="assets/bkg1.png">
     <link rel="preload" as="image" href="assets/bkg2.png">
     <link rel="preload" as="image" href="assets/bkg3.png">
+    <link rel="preload" as="image" href="assets/anonimo.png">
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -46,38 +47,50 @@
         /* SCHERMATE DI SELEZIONE */
         #selection-screen {
             position: absolute; inset: 0; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
             z-index: 10; text-align: center;
             transition: background-image 0.3s ease-in-out, background-color 0.3s;
+        }
+
+        #selection-layout {
+            display: flex; flex-direction: row; width: 100%; height: 100%;
+        }
+
+        @media (max-width: 600px) {
+            #selection-layout { flex-direction: column; }
+            #previewCanvas { width: 200px; height: 200px; }
         }
 
         .bg-select-ch { background-color: #000080; background-image: url('assets/bkg1.png'); background-position: center; background-repeat: no-repeat; background-size: cover; }
         .bg-select-en { background-color: #500000; background-image: url('assets/bkg2.png'); background-position: center; background-repeat: no-repeat; background-size: cover; }
         .bg-select-am { background-color: #000000; background-image: url('assets/bkg3.png'); background-position: center; background-repeat: no-repeat; background-size: cover; }
 
-        /* GRIGLIA PERSONAGGI */
-        .grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 10px; max-width: 500px; padding: 0 10px; }
-        .cell {
-            width: 50px; height: 50px; background-color: #222; border: 3px solid #808080;
-            cursor: pointer; image-rendering: pixelated; background-size: 500% 500%; background-position: 0% 0%; transition: transform 0.1s;
-        }
-        .cell:hover:not(.locked) { border-color: #fff; transform: scale(1.1); z-index: 2; position: relative;}
-        
-        .cell.locked {
-            background-image: none !important; opacity: 0.6; cursor: not-allowed;
-            display: flex; align-items: center; justify-content: center; font-size: 22px;
-        }
-        .cell.locked::after { content: "🔒"; }
-
-        /* SCROLLING ORIZZONTALE AMBIENTI */
+        /* SCROLLING ORIZZONTALE UNIFICATO (PERSONAGGI E AMBIENTI) */
         .scrolling-grid {
             display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
-            gap: 12px; width: 90%; max-width: 700px; margin-top: 20px; padding: 15px 5px;
-            -webkit-overflow-scrolling: touch;
+            gap: 12px; width: 90%; max-width: 600px; padding: 15px 5px;
+            -webkit-overflow-scrolling: touch; margin: 0 auto;
         }
         .scrolling-grid::-webkit-scrollbar { height: 12px; }
         .scrolling-grid::-webkit-scrollbar-track { background: #000; border: 2px solid #00ffff; }
         .scrolling-grid::-webkit-scrollbar-thumb { background: #00ffff; }
+
+        .char-cell {
+            flex: 0 0 70px; height: 70px; background-color: #222; border: 3px solid #808080;
+            cursor: pointer; image-rendering: pixelated; background-size: 500% 500%; background-position: 0% 0%; transition: transform 0.1s;
+            position: relative;
+        }
+        .char-cell:hover:not(.locked) { border-color: #fff; transform: scale(1.1); z-index: 2; }
+        
+        .char-cell.locked {
+            background-image: url('assets/anonimo.png') !important; 
+            background-size: cover !important; 
+            background-position: center !important;
+            opacity: 0.6;
+        }
+        .char-cell.locked::after {
+            content: "🔒"; position: absolute; font-size: 26px; 
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+        }
 
         .stage-cell {
             flex: 0 0 130px; height: 80px; background-color: #222; border: 3px solid #808080;
@@ -160,9 +173,397 @@
 </div>
 
 <div id="game-container">
+    
+    <!-- NUOVO LAYOUT SELEZIONE -->
     <div id="selection-screen" class="bg-select-ch">
-        <div id="grid" class="grid"></div>
-        <div id="char-name" style="margin-top: 20px; color: #ffcc00; text-shadow: 2px 2px #000;">SELECT HERO</div>
+        <div id="selection-layout">
+            <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
+                <canvas id="previewCanvas" width="350" height="350" style="image-rendering: pixelated; max-width: 100%; max-height: 100%;"></canvas>
+            </div>
+            <div style="flex: 1.2; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div id="char-name" style="margin-bottom: 15px; color: #ffcc00; text-shadow: 2px 2px #000; font-size: 14px;">SELECT HERO</div>
+                <div id="grid" class="scrolling-grid"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="round-msg">ROUND 1</div>
+
+    <div id="pause-screen" class="overlay">
+        <h1>PAUSED</h1>
+        <button class="win-btn" style="font-size: 14px; padding: 10px;" onclick="togglePause()">RESUME</button>
+        <button class="win-btn" style="font-size: 14px; padding: 10px; margin-top: 10px;" onclick="resetToMenu()">QUIT TO MENU</button>
+    </div>
+
+    <div id="end-screen" class="overlay">
+        <h1 id="end-title">YOU WIN!</h1>
+        <button class="win-btn" style="font-size: 14px; padding: 10px;" onclick="resetToMenu()">CONTINUE</button>
+    </div>
+
+    <!-- SCHERMATA SBLOCCO GUEST SEGRETO -->
+    <div id="guest-unlock-screen" class="overlay" style="background-color: rgba(0,0,0,0.6); background-blend-mode: multiply;">
+        <h1 style="color: #00ffff; text-shadow: 3px 3px #000; margin-top: 40px;">GUEST UNLOCKED!</h1>
+        <p style="color: white; font-size: 14px; text-shadow: 2px 2px #000; margin-bottom: 20px;">YOU HAVE UNLOCKED GUEST <br><br><span id="guest-unlock-name" style="color: #ffcc00; font-size: 20px;"></span></p>
+        <button class="win-btn" style="font-size: 16px; padding: 15px; margin-top: auto; margin-bottom: 40px;" onclick="confirmGuest()">CONTINUE!</button>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="450"></canvas>
+</div>
+
+<div id="controls">
+    <div class="d-pad">
+        <div class="joy-btn" id="btn-j">▲</div>
+        <div class="joy-btn" id="btn-l">◄</div>
+        <div class="joy-btn" id="btn-r">►</div>
+    </div>
+    <div class="action-buttons">
+        <div class="action-btn blue" id="btn-d">DODGE</div>
+        <div class="action-btn red" id="btn-a">ATK</div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // CACHE ENGINE
+    const imageCache = {};
+    function getImage(src) {
+        if (!imageCache[src]) {
+            const img = new Image(); img.src = src; imageCache[src] = img;
+        }
+        return imageCache[src];
+    }
+
+    const menuMusic = new Audio('assets/Jazzhighlanders_8bit_F.wav');
+    menuMusic.loop = true; 
+    menuMusic.volume = 0.3;
+
+    const stageMusic = new Audio();
+    stageMusic.loop = true; 
+    stageMusic.volume = 0.2;
+
+    const sfx = {
+        r1: new Audio('assets/round-one-fight.mp3'),
+        r2: new Audio('assets/round-two-fight.mp3'),
+        r3: new Audio('assets/final-round-fight.mp3'),
+        win: new Audio('assets/youwin.mp3'),
+        lose: new Audio('assets/youloose.mp3')
+    };
+
+    let audioUnlocked = false;
+
+    function unlockAudio() {
+        if (audioUnlocked) return;
+        if (mode === "SELECT") {
+            menuMusic.play().catch(e => console.log("Init menu err", e));
+        }
+        audioUnlocked = true;
+    }
+
+    document.addEventListener('click', unlockAudio, { once: true });
+    document.addEventListener('touchstart', unlockAudio, { once: true });
+    document.addEventListener('keydown', unlockAudio, { once: true });
+
+    function playSfx(audioObj) {
+        if (!audioObj) return;
+        audioObj.volume = 1.0;
+        audioObj.currentTime = 0;
+        audioObj.play().catch(e => console.log("Audio SFX blocked:", e));
+    }
+
+    const validCharSfxList = [
+        'baba-attack.mp3', 'baba-hurt.mp3', 'baba-loose.mp3', 'baba-win.mp3',
+        'beeman-attack.mp3', 'beeman-hurt.mp3', 'beeman-loose.mp3',
+        'britney-attack.mp3', 'britney-bitch.mp3', 'britney-hurt.mp3', 'britney-loose.mp3',
+        'carma2-attack.mp3', 'carma2-hurt.mp3', 'carma2-loose.mp3', 'carma2-win.mp3',
+        'chronomutant-attack.mp3', 'chronomutant-hurt.mp3', 'chronomutant-loose.mp3', 'chronomutant-win.mp3',
+        'doom-attack.mp3', 'doom-hurt.mp3', 'doom-loose.mp3', 'doom-not-surrender.mp3',
+        'falcon2-attack.mp3', 'falcon2-hurt.mp3', 'falcon2-loose.mp3', 'falcon2-win.mp3',
+        'ferraz2-attack.mp3', 'ferraz2-hurt.mp3', 'ferraz2-loose.mp3', 'ferraz2-win.mp3',
+        'freq-ghoul--hurt.mp3', 'freq-ghoul-attack.mp3', 'freq-ghoul-loose.mp3', 'freq-ghoul-win.mp3',
+        'ljs-attack.mp3', 'ljs-hurt.mp3', 'ljs-loose.mp3', 'ljs-win.mp3',
+        'mauri2-attack.mp3', 'mauri2-hurt.mp3', 'mauri2-loose.mp3', 'mauri2-win.mp3',
+        'mclovin-attack.mp3', 'mclovin-hurt.mp3', 'mclovin-loose.mp3', 'mclovin-win.mp3',
+        'mfdoom-attack.mp3', 'mfdoom-hurt.mp3', 'mfdoom-loose.mp3', 'mfdoom-win.mp3',
+        'murena-attack.mp3', 'murena-hurt.mp3', 'murena-loose.mp3', 'murena-win.mp3',
+        'nan2-attack.mp3', 'nan2-hurt.mp3', 'nan2-loose.mp3', 'nan2-win.mp3',
+        'ornitorincoman-attack.mp3', 'ornitorincoman-hurt.mp3', 'ornitorincoman-loose.mp3', 'ornitorincoman-win.mp3',
+        'pigeon-attack.mp3', 'pigeon-hurt.mp3', 'pigeon-loose.mp3', 'pigeon-win.mp3'
+    ];
+
+    function playCharSfx(spriteId, action) {
+        let audioName = `${spriteId}-${action}`;
+        if (spriteId === 'orologioman') audioName = `chronomutant-${action}`;
+        if (spriteId === 'radioman') {
+            if (action === 'hurt') audioName = 'freq-ghoul--hurt';
+            else audioName = `freq-ghoul-${action}`;
+        }
+        if (spriteId === 'britney' && (action === 'select' || action === 'win')) audioName = 'britney-bitch';
+        if (spriteId === 'doom' && (action === 'select' || action === 'win')) audioName = 'doom-not-surrender';
+
+        let fileName = `${audioName}.mp3`;
+        if (validCharSfxList.includes(fileName)) {
+            let audio = new Audio(`assets/${fileName}`);
+            audio.volume = 1.0;
+            audio.play().catch(e => {});
+        }
+    }
+
+    // LISTA EROI ED ENEMY
+    const heroes = [
+        { spriteId: 'carma2', name: 'CARMA', req: 0 },
+        { spriteId: 'ferraz2', name: 'FERRAZ', req: 0 },
+        { spriteId: 'nan2', name: 'NAN', req: 0 },
+        { spriteId: 'mauri2', name: 'MAURI', req: 0 },
+        { spriteId: 'falcon2', name: 'FALCON', req: 0 },
+        { spriteId: 'arya', name: 'ARYA', req: 1 },
+        { spriteId: 'dutch', name: 'DUTCH', req: 1 },
+        { spriteId: 'ljs', name: 'LONG JOHN SILVER', req: 1 },
+        { spriteId: 'mclovin', name: 'MCLOVIN', req: 1 },
+        { spriteId: 'britney', name: 'BRITNEY', req: 1 },
+        { spriteId: 'mfdoom', name: 'MF DOOM', req: 1 }
+    ];
+
+    const enemiesList = [
+        { spriteId: 'baba', name: 'BABA', req: 0 },
+        { spriteId: 'beeman', name: 'BEEMAN', req: 0 },
+        { spriteId: 'orologioman', name: 'CHRONOMUTANT', req: 0 },
+        { spriteId: 'radioman', name: 'FREQ-GHOUL', req: 0 },
+        { spriteId: 'murena', name: 'MURENA', req: 1 },
+        { spriteId: 'pigeon', name: 'PIGEON', req: 1 },
+        { spriteId: 'ornitorincoman', name: 'ORNITORINCO', req: 1 },
+        { spriteId: 'doom', name: 'DOOM', req: 1 }
+    ];
+
+    const stages = [
+        { name: 'RUSTWATER', bg: 'assets/metro.gif', music: 'assets/rustwater.mp3' },
+        { name: 'COLLAPSE POINT', bg: 'assets/buconero.gif', music: 'assets/collapsepoint.mp3' },
+        { name: 'RAIN RED', bg: 'assets/rainred.gif', music: 'assets/rainred.mp3' },
+        { name: 'FLAMES UPSTAIRS', bg: 'assets/onfire.gif', music: 'assets/flamesupstairs.mp3' },
+        { name: 'EAST END RAIN', bg: 'assets/rain.gif', music: 'assets/eastendrain.mp3' },
+        { name: 'EMPTY BARRIER', bg: 'assets/railway.gif', music: 'assets/emptybarrier.mp3' },
+        { name: 'BADLANDS', bg: 'assets/madmax.gif', music: 'assets/badlands.mp3' },
+        { name: 'JUNGLE CRASH', bg: 'assets/jungla.gif', music: 'assets/junglecrashland.mp3' },
+        { name: 'SEA GLASS', bg: 'assets/acquario.gif', music: 'assets/seaglass.mp3' },
+        { name: 'FISHING HARBOR', bg: 'assets/barchette.gif', music: 'assets/fishingharbor.mp3' },
+        { name: 'PLATFORM 7', bg: 'assets/treni.gif', music: 'assets/platform7.mp3' },
+        { name: "FORTUNE'S END", bg: 'assets/maga.gif', music: 'assets/fortunesend.mp3' },
+        { name: 'DEPARTURE GATE', bg: 'assets/airport.gif', music: 'assets/departuregate.mp3' },
+        { name: 'LIONGATE', bg: 'assets/china.gif', music: 'assets/lionsgate.mp3', zoom: 1.15 },
+        { name: 'EMBER SEAS', bg: 'assets/pirati.gif', music: 'assets/emberseas.mp3' },
+        { name: 'FIESTA', bg: 'assets/mexico.webp', music: 'assets/fiesta.mp3' }
+    ];
+
+    let selectState = 0; 
+    let mode = "SELECT"; 
+    let p1Char = null; let cpuChar = null; let currentStage = null;
+
+    let matchTimer = 99; let framesCounter = 0;
+    let currentRound = 1; let p1Wins = 0; let cpuWins = 0;
+
+    const SPRITE_SIZE = 290; 
+    const GROUND_Y = 450; 
+
+    let p1 = { x: 80, y: GROUND_Y, hp: 100, state: 'idle', frame: 0, dir: 1, vy: 0, timer: 0, deadTimer: 0 };
+    let cpu = { x: 430, y: GROUND_Y, hp: 100, state: 'idle', frame: 0, dir: -1, vy: 0, timer: 0, deadTimer: 0 };
+
+    // VARIABILI PREVIEW
+    let previewCharId = null;
+    let previewLocked = false;
+    let previewTimer = 0;
+    let previewState = 'idle';
+
+    // VARIABILI GUEST UNLOCK
+    let guestPendingChar = null;
+
+    // INPUT
+    const keys = { l: 0, r: 0, j: 0, a: 0, d: 0 };
+    const setup = (id, k) => {
+        const b = document.getElementById(id);
+        b.ontouchstart = (e) => { e.preventDefault(); keys[k] = 1; };
+        b.ontouchend = (e) => { e.preventDefault(); keys[k] = 0; };
+        b.onmousedown = () => keys[k] = 1;
+        b.onmouseup = () => keys[k] = 0;
+    };
+    setup('btn-l', 'l'); setup('btn-r', 'r'); setup('btn-j', 'j'); setup('btn-a', 'a'); setup('btn-d', 'd');
+
+    window.onkeydown = (e) => {
+        if(e.code === 'ArrowLeft') keys.l = 1; if(e.code === 'ArrowRight') keys.r = 1;
+        if(e.code === 'ArrowUp') keys.j = 1; if(e.code === 'Space') keys.a = 1;
+        if(e.code === 'ShiftLeft') keysEcco il codice completamente aggiornato con tutte le tue richieste. 
+
+Ho rimosso il sistema di salvataggio delle vittorie e trasformato la schermata di selezione: ora i personaggi scorrono orizzontalmente in basso, mentre lo sfondo del canvas mostra il personaggio evidenziato in grande sul lato sinistro, alternando `idle` e `attack` ogni secondo e mezzo.
+
+I personaggi bloccati mostreranno l'immagine `anonimo.png` nel riquadrino della lista (assicurati di avere `anonimo.png` nella cartella `assets`). Se fai un **doppio tap/click** su un personaggio bloccato, si attiverà la schermata segreta in un livello casuale che ti annuncerà lo sblocco, portandoti direttamente allo step successivo!
+
+Copia e sostituisci tutto:
+
+```html
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Musical Fighters - Murena Edition</title>
+    
+    <!-- PRECARICAMENTO SFONDI SELEZIONI -->
+    <link rel="preload" as="image" href="assets/bkg1.png">
+    <link rel="preload" as="image" href="assets/bkg2.png">
+    <link rel="preload" as="image" href="assets/bkg3.png">
+    <link rel="preload" as="image" href="assets/anonimo.png">
+
+    <style>
+        @import url('[https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap](https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap)');
+
+        body { 
+            background: #000; margin: 0; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; height: 100vh; overflow: hidden; 
+            font-family: 'Press Start 2P', cursive; color: #fff; touch-action: none;
+            user-select: none;
+        }
+
+        #header-bar {
+            width: 100%; background: #c0c0c0; border-bottom: 3px solid #000;
+            padding: 10px; display: flex; justify-content: space-between; align-items: center;
+            color: #000; font-size: 10px; box-sizing: border-box; z-index: 20;
+        }
+
+        .win-btn {
+            background: #c0c0c0; border: 2px solid; border-color: #fff #808080 #808080 #fff;
+            padding: 5px 10px; text-decoration: none; color: #000; font-size: 9px; cursor: pointer;
+        }
+        .win-btn:active { border-color: #808080 #fff #fff #808080; background: #a0a0a0; }
+
+        #game-container {
+            position: relative; width: 100vw; height: calc(100vw * 9/16); 
+            max-width: 800px; max-height: 450px; background: #222; overflow: hidden;
+            border: 4px solid #c0c0c0;
+        }
+
+        canvas { 
+            width: 100%; height: 100%; image-rendering: pixelated; display: block; 
+            background-color: transparent; 
+        }
+
+        /* SCHERMATE DI SELEZIONE OVERLAY */
+        #selection-screen {
+            position: absolute; inset: 0; 
+            display: flex; flex-direction: column; align-items: center;
+            z-index: 10; text-align: center;
+            background: transparent; /* Il canvas farà da sfondo */
+        }
+
+        /* SCROLLING ORIZZONTALE UNIFICATO (Personaggi e Stage) */
+        .scrolling-grid {
+            display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+            gap: 12px; width: 100%; padding: 15px 10px; box-sizing: border-box;
+            background: rgba(0, 0, 0, 0.6); border-top: 3px solid #808080;
+            -webkit-overflow-scrolling: touch;
+        }
+        .scrolling-grid::-webkit-scrollbar { height: 8px; }
+        .scrolling-grid::-webkit-scrollbar-track { background: #000; }
+        .scrolling-grid::-webkit-scrollbar-thumb { background: #ffcc00; border-radius: 4px; }
+
+        .cell {
+            flex: 0 0 60px; height: 60px; background-color: #222; border: 3px solid #808080;
+            cursor: pointer; image-rendering: pixelated; transition: transform 0.1s, border-color 0.1s;
+        }
+        .cell:hover { border-color: #fff; transform: scale(1.1); z-index: 2; position: relative;}
+        
+        .cell.normal-style { background-size: 500% 500%; background-position: 0% 0%; }
+        .cell.locked-style { background-size: cover; background-position: center; border-color: #880000; }
+        .cell.locked-style:hover { border-color: #ff0000; }
+
+        .stage-cell {
+            flex: 0 0 130px; height: 80px; background-color: #222; border: 3px solid #808080;
+            cursor: pointer; background-size: cover; background-position: center; 
+            transition: transform 0.1s; position: relative; overflow: hidden;
+        }
+        .stage-cell:hover { border-color: #00ffff; transform: scale(1.05); z-index: 2;}
+        .stage-name {
+            position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.7);
+            color: #fff; font-size: 7px; padding: 4px 0; text-align: center;
+        }
+
+        /* OVERLAYS */
+        .overlay {
+            position: absolute; inset: 0; background: rgba(0, 0, 0, 0.85);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 15; text-align: center; visibility: hidden;
+        }
+        .overlay h1 { color: #ffcc00; text-shadow: 3px 3px #000; margin-bottom: 20px; line-height: 1.5; }
+        
+        #round-msg {
+            position: absolute; top: 40%; width: 100%; text-align: center;
+            font-size: 24px; color: #fff; text-shadow: 2px 2px #f00; z-index: 5;
+            visibility: hidden; font-weight: bold; pointer-events: none;
+        }
+
+        /* CONTROLLI MOBILE STILE CABINATO */
+        #controls {
+            display: flex; justify-content: space-between; width: 100%; max-width: 800px;
+            padding: 15px 15px; box-sizing: border-box; background: #1a1a1a; 
+            border-top: 4px solid #333; box-shadow: inset 0 10px 20px rgba(0,0,0,0.5);
+            visibility: hidden;
+        }
+
+        .d-pad {
+            display: grid; grid-template-columns: 55px 55px 55px; grid-template-rows: 55px 55px; gap: 5px;
+            margin-left: -5px; 
+        }
+        .joy-btn {
+            width: 100%; height: 100%; background: #333; border: 4px solid; 
+            border-color: #555 #111 #111 #555; display: flex; align-items: center; 
+            justify-content: center; color: #aaa; font-size: 22px; cursor: pointer;
+            box-shadow: inset 2px 2px 5px rgba(255,255,255,0.1), inset -2px -2px 5px rgba(0,0,0,0.5);
+            border-radius: 8px; transition: background 0.1s, color 0.1s;
+        }
+        .joy-btn:active {
+            border-color: #111 #555 #555 #111; background: #222; color: #fff;
+        }
+        #btn-j { grid-column: 2; grid-row: 1; border-radius: 8px 8px 4px 4px; }
+        #btn-l { grid-column: 1; grid-row: 2; border-radius: 8px 4px 4px 8px; }
+        #btn-r { grid-column: 3; grid-row: 2; border-radius: 4px 8px 8px 4px; }
+
+        .action-buttons {
+            display: flex; gap: 15px; align-items: flex-end; padding-bottom: 5px; margin-right: -5px;
+        }
+        .action-btn {
+            width: 70px; height: 70px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 10px; cursor: pointer; font-family: 'Press Start 2P', cursive;
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.5);
+            box-shadow: 0 6px 0 #0d0d0d, 0 8px 10px rgba(0,0,0,0.6), inset 0 5px 10px rgba(255,255,255,0.3);
+            transition: transform 0.1s, box-shadow 0.1s; border: 2px solid #000;
+            user-select: none;
+        }
+        .action-btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 0px 0 #0d0d0d, 0 2px 4px rgba(0,0,0,0.6), inset 0 2px 5px rgba(0,0,0,0.5);
+        }
+        .action-btn.blue { background: radial-gradient(circle at 30% 30%, #3a7bd5, #001f4d); margin-bottom: 25px; }
+        .action-btn.red { background: radial-gradient(circle at 30% 30%, #ff4b4b, #660000); }
+
+    </style>
+</head>
+<body>
+
+<div id="header-bar">
+    <button class="win-btn" onclick="window.location.href='index.html'">← DESKTOP</button>
+    <span id="top-msg">STUDIO MURENA: SELECT HERO</span>
+    <button class="win-btn" id="btn-pause" style="display: none;" onclick="togglePause()">II PAUSE</button>
+</div>
+
+<div id="game-container">
+    <div id="selection-screen">
+        <h2 id="char-name" style="margin-top: 15px; margin-bottom: 5px; color: #ffcc00; text-shadow: 2px 2px #000;">SELECT HERO</h2>
+        <div style="font-size: 8px; color: #fff; background: rgba(0,0,0,0.5); padding: 5px;">DOUBLE TAP TO CONFIRM/UNLOCK</div>
+        
+        <!-- Spazio flessibile per lasciare il canvas visibile -->
+        <div style="flex: 1; width: 100%;"></div> 
+        
+        <div id="grid" class="scrolling-grid"></div>
     </div>
     
     <div id="round-msg">ROUND 1</div>
@@ -176,21 +577,13 @@
     <!-- Schermata Fine Partita -->
     <div id="end-screen" class="overlay">
         <h1 id="end-title">YOU WIN!</h1>
-        <button class="win-btn" style="font-size: 14px; padding: 10px;" onclick="handleEndScreen()">CONTINUE</button>
+        <button class="win-btn" style="font-size: 14px; padding: 10px;" onclick="resetToMenu()">CONTINUE</button>
     </div>
 
-    <!-- Schermata di Sblocco Standard -->
-    <div id="unlock-screen" class="overlay">
-        <h1>NEW CHALLENGER<br>UNLOCKED!</h1>
-        <p id="unlock-text" style="color: white; margin-bottom: 30px; font-size: 14px; text-shadow: 1px 1px #000;"></p>
-        <button class="win-btn" style="font-size: 14px; padding: 10px;" onclick="resetToMenu()">AWESOME!</button>
-    </div>
-
-    <!-- NUOVA Schermata di Sblocco Speciale (Arya & Dutch) -->
-    <div id="special-unlock-screen" class="overlay" style="background: rgba(0,0,0,0.5); justify-content: flex-start; padding-top: 40px;">
-        <h1 style="color: #00ffff; text-shadow: 3px 3px #000;">NEW HEROES!</h1>
-        <p style="color: white; font-size: 12px; text-shadow: 2px 2px #000; margin-bottom: 20px; line-height: 1.6;">ARYA & DUTCH HAVE JOINED THE FIGHT!</p>
-        <button class="win-btn" style="font-size: 16px; padding: 15px; margin-top: auto; margin-bottom: 40px;" onclick="resetToMenu()">LET'S GO!</button>
+    <!-- Schermata di Sblocco GUEST -->
+    <div id="guest-unlock-screen" class="overlay" style="background: rgba(0,0,0,0.4); justify-content: flex-start; padding-top: 50px;">
+        <h1 style="color: #ffcc00; text-shadow: 3px 3px #000;">YOU HAVE UNLOCKED GUEST<br><span id="guest-unlock-name" style="color: #00ffff;"></span>!</h1>
+        <button class="win-btn" style="font-size: 16px; padding: 15px; margin-top: auto; margin-bottom: 50px;" onclick="finishGuestUnlock()">AWESOME!</button>
     </div>
 
     <canvas id="gameCanvas" width="800" height="450"></canvas>
@@ -298,35 +691,30 @@
         }
     }
 
-    // SALVATAGGIO PROGRESSI
-    let totalWins = parseInt(sessionStorage.getItem('murenaWins') || '0');
-    let pendingUnlockMessage = ""; 
-    let pendingSpecialUnlock = false; // Flag per lo showcase di Arya & Dutch
-
-    // ASSETS & PROGRESSIONE CON SBLOCCHI SLITTATI
+    // LISTA ASSETS GIA' COMPRENSIVA DI STATO LOCKED FISSO
     const heroes = [
-        { spriteId: 'carma2', name: 'CARMA', req: 0 },
-        { spriteId: 'ferraz2', name: 'FERRAZ', req: 0 },
-        { spriteId: 'nan2', name: 'NAN', req: 0 },
-        { spriteId: 'mauri2', name: 'MAURI', req: 0 },
-        { spriteId: 'falcon2', name: 'FALCON', req: 0 },
-        { spriteId: 'arya', name: 'ARYA', req: 1 },
-        { spriteId: 'dutch', name: 'DUTCH', req: 1 },
-        { spriteId: 'ljs', name: 'LONG JOHN SILVER', req: 2 },
-        { spriteId: 'mclovin', name: 'MCLOVIN', req: 3 },
-        { spriteId: 'britney', name: 'BRITNEY', req: 4 },
-        { spriteId: 'mfdoom', name: 'MF DOOM', req: 5 }
+        { spriteId: 'carma2', name: 'CARMA', isLocked: false },
+        { spriteId: 'ferraz2', name: 'FERRAZ', isLocked: false },
+        { spriteId: 'nan2', name: 'NAN', isLocked: false },
+        { spriteId: 'mauri2', name: 'MAURI', isLocked: false },
+        { spriteId: 'falcon2', name: 'FALCON', isLocked: false },
+        { spriteId: 'arya', name: 'ARYA', isLocked: true },
+        { spriteId: 'dutch', name: 'DUTCH', isLocked: true },
+        { spriteId: 'ljs', name: 'LONG JOHN SILVER', isLocked: true },
+        { spriteId: 'mclovin', name: 'MCLOVIN', isLocked: true },
+        { spriteId: 'britney', name: 'BRITNEY', isLocked: true },
+        { spriteId: 'mfdoom', name: 'MF DOOM', isLocked: true }
     ];
 
     const enemiesList = [
-        { spriteId: 'baba', name: 'BABA', req: 0 },
-        { spriteId: 'beeman', name: 'BEEMAN', req: 0 },
-        { spriteId: 'orologioman', name: 'CHRONOMUTANT', req: 0 },
-        { spriteId: 'radioman', name: 'FREQ-GHOUL', req: 0 },
-        { spriteId: 'murena', name: 'MURENA', req: 2 },
-        { spriteId: 'pigeon', name: 'PIGEON', req: 3 },
-        { spriteId: 'ornitorincoman', name: 'ORNITORINCO', req: 4 },
-        { spriteId: 'doom', name: 'DOOM', req: 5 }
+        { spriteId: 'baba', name: 'BABA', isLocked: false },
+        { spriteId: 'beeman', name: 'BEEMAN', isLocked: false },
+        { spriteId: 'orologioman', name: 'CHRONOMUTANT', isLocked: false },
+        { spriteId: 'radioman', name: 'FREQ-GHOUL', isLocked: false },
+        { spriteId: 'murena', name: 'MURENA', isLocked: true },
+        { spriteId: 'pigeon', name: 'PIGEON', isLocked: true },
+        { spriteId: 'ornitorincoman', name: 'ORNITORINCO', isLocked: true },
+        { spriteId: 'doom', name: 'DOOM', isLocked: true }
     ];
 
     const stages = [
@@ -351,6 +739,8 @@
     let selectState = 0; 
     let mode = "SELECT"; 
     let p1Char = null; let cpuChar = null; let currentStage = null;
+    let hoverChar = heroes[0];
+    let currentStageHover = stages[0];
 
     let matchTimer = 99; let framesCounter = 0;
     let currentRound = 1; let p1Wins = 0; let cpuWins = 0;
@@ -360,11 +750,6 @@
 
     let p1 = { x: 80, y: GROUND_Y, hp: 100, state: 'idle', frame: 0, dir: 1, vy: 0, timer: 0, deadTimer: 0 };
     let cpu = { x: 430, y: GROUND_Y, hp: 100, state: 'idle', frame: 0, dir: -1, vy: 0, timer: 0, deadTimer: 0 };
-
-    // Variabili per lo showcase di Arya e Dutch
-    let showcaseTimer = 0;
-    let showcaseState = 'idle';
-    let showcaseFighters = [];
 
     // INPUT
     const keys = { l: 0, r: 0, j: 0, a: 0, d: 0 };
@@ -389,57 +774,98 @@
         if(e.code === 'ShiftLeft') keys.d = 0;
     };
 
+    let lastCellClicked = null;
+    let clickTimeout = null;
+
+    function handleCharacterDoubleTap(c) {
+        if (c.isLocked) {
+            triggerGuestUnlock(c);
+        } else {
+            if (selectState === 0) {
+                p1Char = c;
+                selectState = 1;
+                hoverChar = enemiesList[0];
+                loadSelectionScreen();
+            } else if (selectState === 1) {
+                cpuChar = c;
+                selectState = 2;
+                loadSelectionScreen();
+            }
+        }
+    }
+
+    function triggerGuestUnlock(c) {
+        c.isLocked = false; 
+        if (selectState === 0) p1Char = c;
+        if (selectState === 1) cpuChar = c;
+        
+        mode = "GUEST_UNLOCK";
+        document.getElementById('selection-screen').style.display = 'none';
+        
+        let randStage = stages[Math.floor(Math.random() * stages.length)];
+        canvas.style.backgroundImage = `url('${randStage.bg}')`;
+        canvas.style.backgroundSize = 'cover';
+        canvas.style.backgroundPosition = 'center';
+
+        document.getElementById('guest-unlock-name').innerText = c.name;
+        document.getElementById('guest-unlock-screen').style.visibility = 'visible';
+    }
+
+    function finishGuestUnlock() {
+        document.getElementById('guest-unlock-screen').style.visibility = 'hidden';
+        if (selectState === 0) {
+            selectState = 1;
+            mode = "SELECT";
+            hoverChar = enemiesList[0];
+            document.getElementById('selection-screen').style.display = 'flex';
+            loadSelectionScreen();
+        } else if (selectState === 1) {
+            startMatch(); 
+        }
+    }
+
     function loadSelectionScreen() {
         const grid = document.getElementById('grid');
-        const screen = document.getElementById('selection-screen');
         const title = document.getElementById('char-name');
         grid.innerHTML = '';
-        
-        canvas.style.backgroundImage = 'none';
         
         if (audioUnlocked && mode === "SELECT" && menuMusic.paused) {
             menuMusic.play().catch(e => {});
         }
 
-        if (selectState === 0) {
-            grid.className = 'grid'; 
-            screen.className = 'bg-select-ch'; title.innerText = 'SELECT HERO';
-            heroes.forEach(c => {
-                const d = document.createElement('div'); d.className = 'cell';
-                if (totalWins >= c.req) {
-                    d.style.backgroundImage = `url('assets/${c.spriteId}-idle.png')`;
-                    d.onclick = () => { 
-                        p1Char = c; 
-                        playCharSfx(c.spriteId, 'select');
-                        selectState = 1; 
-                        loadSelectionScreen(); 
-                    };
+        if (selectState === 0 || selectState === 1) {
+            title.innerText = selectState === 0 ? 'SELECT HERO' : 'SELECT OPPONENT';
+            title.style.color = selectState === 0 ? '#ffcc00' : '#fff';
+            
+            let list = selectState === 0 ? heroes : enemiesList;
+            
+            list.forEach(c => {
+                const d = document.createElement('div');
+                if (c.isLocked) {
+                    d.className = 'cell locked-style';
+                    d.style.backgroundImage = `url('assets/anonimo.png')`;
                 } else {
-                    d.classList.add('locked');
-                }
-                grid.appendChild(d);
-            });
-        } else if (selectState === 1) {
-            grid.className = 'grid'; 
-            screen.className = 'bg-select-en'; title.innerText = 'SELECT OPPONENT'; title.style.color = '#fff';
-            enemiesList.forEach(c => {
-                const d = document.createElement('div'); d.className = 'cell';
-                if (totalWins >= c.req) {
+                    d.className = 'cell normal-style';
                     d.style.backgroundImage = `url('assets/${c.spriteId}-idle.png')`;
-                    d.onclick = () => { 
-                        cpuChar = c; 
-                        playCharSfx(c.spriteId, 'select');
-                        selectState = 2; 
-                        loadSelectionScreen(); 
-                    };
-                } else {
-                    d.classList.add('locked');
                 }
+
+                d.onclick = () => { 
+                    if (lastCellClicked === c) {
+                        clearTimeout(clickTimeout);
+                        lastCellClicked = null;
+                        handleCharacterDoubleTap(c);
+                    } else {
+                        lastCellClicked = c;
+                        hoverChar = c;
+                        playCharSfx(c.spriteId, 'select');
+                        clickTimeout = setTimeout(() => { lastCellClicked = null; }, 400);
+                    }
+                };
                 grid.appendChild(d);
             });
         } else if (selectState === 2) {
-            grid.className = 'scrolling-grid'; 
-            screen.className = 'bg-select-am'; title.innerText = 'SELECT STAGE'; title.style.color = '#00ffff';
+            title.innerText = 'SELECT STAGE'; title.style.color = '#00ffff';
+            
             stages.forEach(s => {
                 const d = document.createElement('div'); d.className = 'stage-cell';
                 d.style.backgroundImage = `url('${s.bg}')`;
@@ -449,7 +875,18 @@
                 label.innerText = s.name;
                 d.appendChild(label);
 
-                d.onclick = () => { currentStage = s; startMatch(); };
+                d.onclick = () => { 
+                    if (lastCellClicked === s) {
+                        clearTimeout(clickTimeout);
+                        lastCellClicked = null;
+                        currentStage = s; 
+                        startMatch();
+                    } else {
+                        lastCellClicked = s;
+                        currentStageHover = s;
+                        clickTimeout = setTimeout(() => { lastCellClicked = null; }, 400);
+                    }
+                };
                 grid.appendChild(d);
             });
         }
@@ -517,62 +954,22 @@
         }
     }
 
-    function startSpecialUnlock() {
-        mode = "UNLOCK_SHOWCASE";
-        document.getElementById('controls').style.visibility = 'hidden';
-        document.getElementById('btn-pause').style.display = 'none';
-        
-        // Assegna uno sfondo random per lo showcase
-        let randStage = stages[Math.floor(Math.random() * stages.length)];
-        canvas.style.backgroundImage = `url('${randStage.bg}')`;
-        canvas.style.backgroundSize = 'cover';
-        canvas.style.backgroundPosition = 'center';
-
-        // Precarica gli sprite
-        getImage('assets/arya-idle.png'); getImage('assets/arya-attack.png');
-        getImage('assets/dutch-idle.png'); getImage('assets/dutch-attack.png');
-
-        showcaseTimer = 0;
-        showcaseState = 'idle';
-        showcaseFighters = [
-            { x: 120, y: GROUND_Y, state: 'idle', frame: 0, dir: 1, deadTimer: 0 },
-            { x: 420, y: GROUND_Y, state: 'idle', frame: 0, dir: -1, deadTimer: 0 }
-        ];
-
-        document.getElementById('special-unlock-screen').style.visibility = 'visible';
-    }
-
     function resetToMenu() {
         stageMusic.pause();
         stageMusic.currentTime = 0;
 
         document.getElementById('end-screen').style.visibility = 'hidden';
-        document.getElementById('unlock-screen').style.visibility = 'hidden';
-        document.getElementById('special-unlock-screen').style.visibility = 'hidden';
         document.getElementById('pause-screen').style.visibility = 'hidden';
         document.getElementById('controls').style.visibility = 'hidden';
         document.getElementById('btn-pause').style.display = 'none';
-        document.getElementById('selection-screen').style.display = 'flex';
+        
+        canvas.style.backgroundImage = 'none';
         
         mode = "SELECT";
         selectState = 0; p1Char = null; cpuChar = null; currentStage = null;
+        hoverChar = heroes[0];
+        document.getElementById('selection-screen').style.display = 'flex';
         loadSelectionScreen();
-    }
-
-    function handleEndScreen() {
-        document.getElementById('end-screen').style.visibility = 'hidden';
-        
-        if (pendingSpecialUnlock) {
-            startSpecialUnlock();
-            pendingSpecialUnlock = false;
-        }
-        else if (pendingUnlockMessage !== "") {
-            document.getElementById('unlock-text').innerText = pendingUnlockMessage;
-            document.getElementById('unlock-screen').style.visibility = 'visible';
-            pendingUnlockMessage = ""; 
-        } else {
-            resetToMenu();
-        }
     }
 
     function drawFighter(f, spriteId) {
@@ -728,20 +1125,6 @@
 
                         document.getElementById('end-title').innerText = wonMatch ? "YOU WIN!" : "GAME OVER";
                         document.getElementById('end-title').style.color = wonMatch ? "#ffcc00" : "#ff0000";
-                        
-                        if (wonMatch) {
-                            totalWins++;
-                            sessionStorage.setItem('murenaWins', totalWins);
-                            
-                            if (totalWins === 1) {
-                                pendingSpecialUnlock = true; 
-                            }
-                            else if (totalWins === 2) pendingUnlockMessage = "HERO: LONG JOHN SILVER\nENEMY: MURENA";
-                            else if (totalWins === 3) pendingUnlockMessage = "HERO: MCLOVIN\nENEMY: PIGEON";
-                            else if (totalWins === 4) pendingUnlockMessage = "HERO: BRITNEY\nENEMY: ORNITORINCO";
-                            else if (totalWins === 5) pendingUnlockMessage = "HERO: MF DOOM\nENEMY: DOOM";
-                        }
-
                         document.getElementById('end-screen').style.visibility = 'visible';
                     } else {
                         currentRound++;
@@ -753,21 +1136,6 @@
     }
 
     function update() {
-        if (mode === "UNLOCK_SHOWCASE") {
-            showcaseTimer++;
-            // 180 frame = 3 secondi a 60 fps
-            if (showcaseTimer % 180 === 0) {
-                showcaseState = (showcaseState === 'idle') ? 'attack' : 'idle';
-                showcaseFighters[0].state = showcaseState;
-                showcaseFighters[1].state = showcaseState;
-                
-                // Resetta i frame per far partire l'animazione attack da zero
-                showcaseFighters[0].frame = 0;
-                showcaseFighters[1].frame = 0;
-            }
-            return;
-        }
-
         if (mode !== "FIGHT" && mode !== "ROUND_OVER") return;
 
         if (mode === "FIGHT") {
@@ -789,20 +1157,53 @@
     function draw() {
         ctx.clearRect(0, 0, 800, 450);
 
-        if (mode === "UNLOCK_SHOWCASE") {
-            drawFighter(showcaseFighters[0], 'arya');
-            drawFighter(showcaseFighters[1], 'dutch');
+        if (mode === "SELECT") {
+            // Sfondo selezione
+            let bgSrc = selectState === 0 ? 'assets/bkg1.png' : (selectState === 1 ? 'assets/bkg2.png' : 'assets/bkg3.png');
+            if (selectState === 2 && currentStageHover) bgSrc = currentStageHover.bg;
             
-            // Etichette dei nomi fluttuanti
-            ctx.fillStyle = "#fff"; ctx.font = "16px 'Press Start 2P'";
-            ctx.fillText("ARYA", showcaseFighters[0].x + 75, showcaseFighters[0].y - 200);
-            ctx.fillText("DUTCH", showcaseFighters[1].x + 65, showcaseFighters[1].y - 200);
-            
-            requestAnimationFrame(draw);
-            return;
-        }
+            let bgImg = getImage(bgSrc);
+            if (bgImg.complete && bgImg.naturalWidth > 0) {
+                ctx.drawImage(bgImg, 0, 0, 800, 450);
+            } else {
+                ctx.fillStyle = selectState === 0 ? "#000080" : (selectState === 1 ? "#500000" : "#000000");
+                ctx.fillRect(0,0,800,450);
+            }
 
-        if (mode !== "SELECT" && currentStage) {
+            // Preview del personaggio selezionato sul lato sinistro
+            if ((selectState === 0 || selectState === 1) && hoverChar) {
+                let drawState = Math.floor(Date.now() / 1500) % 2 === 0 ? 'idle' : 'attack';
+                let finalImg = getImage(`assets/${hoverChar.spriteId}-${drawState}.png`);
+                
+                if (finalImg.complete && finalImg.naturalWidth > 0) {
+                    const frameW = finalImg.width / 5; const frameH = finalImg.height / 5;
+                    const frame = Math.floor(Date.now() / 50) % 25;
+                    const sx = (frame % 5) * frameW; const sy = Math.floor(frame / 5) * frameH;
+                    
+                    ctx.save();
+                    ctx.translate(180, 360); // Posizione a sinistra
+                    
+                    if (selectState === 1) {
+                        ctx.scale(-2.2, 2.2); // Gira il nemico
+                    } else {
+                        ctx.scale(2.2, 2.2); // Ingrandito
+                    }
+                    
+                    ctx.drawImage(finalImg, sx, sy, frameW, frameH, -SPRITE_SIZE/2, -SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE);
+                    ctx.restore();
+                    
+                    // Disegna il nome e lo stato
+                    ctx.fillStyle = "#fff"; ctx.font = "16px 'Press Start 2P'"; ctx.textAlign = "center";
+                    ctx.fillText(hoverChar.name, 180, 400);
+                    if (hoverChar.isLocked) {
+                        ctx.fillStyle = "#ff0000";
+                        ctx.fillText("LOCKED", 180, 425);
+                    }
+                }
+            }
+        } 
+        else if (mode !== "SELECT" && mode !== "GUEST_UNLOCK" && currentStage) {
+            // UI Barra HP
             ctx.fillStyle = "#444"; ctx.fillRect(45, 15, 310, 20); ctx.fillRect(445, 15, 310, 20);
             ctx.fillStyle = "red"; ctx.fillRect(50, 17, 300, 16); ctx.fillRect(450, 17, 300, 16);
             
@@ -827,8 +1228,12 @@
             drawFighter(p1, p1Char.spriteId);
             drawFighter(cpu, cpuChar.spriteId);
         }
+
         requestAnimationFrame(draw);
     }
+
+    // Aggiungi anonimo alle immagini precacheate per evitare rallentamenti
+    getImage('assets/anonimo.png');
 
     loadSelectionScreen();
     setInterval(update, 1000/60);
