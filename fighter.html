@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Musical Fighters - Murena Edition</title>
+    
+    <!-- PRECARICAMENTO SFONDI SELEZIONI -->
+    <link rel="preload" as="image" href="assets/bkg1.png">
+    <link rel="preload" as="image" href="assets/bkg2.png">
+    <link rel="preload" as="image" href="assets/bkg3.png">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        body { 
+            background: #000; margin: 0; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; height: 100vh; overflow: hidden; 
+            font-family: 'Press Start 2P', cursive; color: #fff; touch-action: none;
+            user-select: none;
+        }
+
+        #header-bar {
+            width: 100%; background: #c0c0c0; border-bottom: 3px solid #000;
+            padding: 10px; display: flex; justify-content: space-between; align-items: center;
+            color: #000; font-size: 10px; box-sizing: border-box; z-index: 20;
+        }
+
+        .win-btn {
+            background: #c0c0c0; border: 2px solid; border-color: #fff #808080 #808080 #fff;
+            padding: 5px 10px; text-decoration: none; color: #000; font-size: 9px; cursor: pointer;
+        }
+        .win-btn:active { border-color: #808080 #fff #fff #808080; background: #a0a0a0; }
+
+        #game-container {
+            position: relative; width: 100vw; height: calc(100vw * 9/16); 
+            max-width: 800px; max-height: 450px; background: #222; overflow: hidden;
+            border: 4px solid #c0c0c0;
+        }
+
+        canvas { 
+            width: 100%; height: 100%; image-rendering: pixelated; display: block; 
+            background-color: transparent; 
+        }
+
+        /* SCHERMATE DI SELEZIONE */
+        #selection-screen {
+            position: absolute; inset: 0; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 10; text-align: center;
+            transition: background-image 0.3s ease-in-out, background-color 0.3s;
+        }
+
+        .bg-select-ch { background-color: #000080; background-image: url('assets/bkg1.png'); background-position: center; background-repeat: no-repeat; background-size: cover; }
+        .bg-select-en { background-color: #500000; background-image: url('assets/bkg2.png'); background-position: center; background-repeat: no-repeat; background-size: cover; }
+        .bg-select-am { background-color: #000000; background-image: url('assets/bkg3.png'); background-position: center; background-repeat: no-repeat; background-size: cover; }
+
+        /* GRIGLIA PERSONAGGI */
+        .grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 10px; max-width: 500px; padding: 0 10px; }
+        .cell {
+            width: 50px; height: 50px; background-color: #222; border: 3px solid #808080;
+            cursor: pointer; image-rendering: pixelated; background-size: 500% 500%; background-position: 0% 0%; transition: transform 0.1s;
+        }
+        .cell:hover:not(.locked) { border-color: #fff; transform: scale(1.1); z-index: 2; position: relative;}
+        
+        .cell.locked {
+            background-image: none !important; opacity: 0.6; cursor: not-allowed;
+            display: flex; align-items: center; justify-content: center; font-size: 22px;
+        }
+        .cell.locked::after { content: "🔒"; }
+
+        /* SCROLLING ORIZZONTALE AMBIENTI */
+        .scrolling-grid {
+            display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+            gap: 12px; width: 90%; max-width: 700px; margin-top: 20px; padding: 15px 5px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .scrolling-grid::-webkit-scrollbar { height: 12px; }
+        .scrolling-grid::-webkit-scrollbar-track { background: #000; border: 2px solid #00ffff; }
+        .scrolling-grid::-webkit-scrollbar-thumb { background: #00ffff; }
+
+        .stage-cell {
+            flex: 0 0 130px; height: 80px; background-color: #222; border: 3px solid #808080;
+            cursor: pointer; background-size: cover; background-position: center; 
+            transition: transform 0.1s; position: relative; overflow: hidden;
+        }
+        .stage-cell:hover { border-color: #00ffff; transform: scale(1.05); }
+        .stage-name {
+            position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.7);
+            color: #fff; font-size: 7px; padding: 4px 0; text-align: center;
+        }
+
+        /* OVERLAYS */
+        .overlay {
+            position: absolute; inset: 0; background: rgba(0, 0, 0, 0.85);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 15; text-align: center; visibility: hidden;
+        }
+        .overlay h1 { color: #ffcc00; text-shadow: 3px 3px #000; margin-bottom: 20px; line-height: 1.5; }
+        
+        #round-msg {
+            position: absolute; top: 40%; width: 100%; text-align: center;
+            font-size: 24px; color: #fff; text-shadow: 2px 2px #f00; z-index: 5;
+            visibility: hidden; font-weight: bold; pointer-events: none;
+        }
+
+        /* CONTROLLI MOBILE STILE CABINATO */
+        #controls {
+            display: flex; justify-content: space-between; width: 100%; max-width: 800px;
+            padding: 15px 15px; box-sizing: border-box; background: #1a1a1a; 
+            border-top: 4px solid #333; box-shadow: inset 0 10px 20px rgba(0,0,0,0.5);
+            visibility: hidden;
+        }
+
+        .d-pad {
+            display: grid; grid-template-columns: 55px 55px 55px; grid-template-rows: 55px 55px; gap: 5px;
+            margin-left: -5px; 
+        }
+        .joy-btn {
+            width: 100%; height: 100%; background: #333; border: 4px solid; 
+            border-color: #555 #111 #111 #555; display: flex; align-items: center; 
+            justify-content: center; color: #aaa; font-size: 22px; cursor: pointer;
+            box-shadow: inset 2px 2px 5px rgba(255,255,255,0.1), inset -2px -2px 5px rgba(0,0,0,0.5);
+            border-radius: 8px; transition: background 0.1s, color 0.1s;
+        }
+        .joy-btn:active {
+            border-color: #111 #555 #555 #111; background: #222; color: #fff;
+        }
+        #btn-j { grid-column: 2; grid-row: 1; border-radius: 8px 8px 4px 4px; }
+        #btn-l { grid-column: 1; grid-row: 2; border-radius: 8px 4px 4px 8px; }
+        #btn-r { grid-column: 3; grid-row: 2; border-radius: 4px 8px 8px 4px; }
+
+        .action-buttons {
+            display: flex; gap: 15px; align-items: flex-end; padding-bottom: 5px; margin-right: -5px;
+        }
+        .action-btn {
+            width: 70px; height: 70px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 10px; cursor: pointer; font-family: 'Press Start 2P', cursive;
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.5);
+            box-shadow: 0 6px 0 #0d0d0d, 0 8px 10px rgba(0,0,0,0.6), inset 0 5px 10px rgba(255,255,255,0.3);
+            transition: transform 0.1s, box-shadow 0.1s; border: 2px solid #000;
+            user-select: none;
+        }
+        .action-btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 0px 0 #0d0d0d, 0 2px 4px rgba(0,0,0,0.6), inset 0 2px 5px rgba(0,0,0,0.5);
+        }
+        .action-btn.blue { background: radial-gradient(circle at 30% 30%, #3a7bd5, #001f4d); margin-bottom: 25px; }
+        .action-btn.red { background: radial-gradient(circle at 30% 30%, #ff4b4b, #660000); }
+
+    </style>
+</head>
+<body>
+
+<div id="header-bar">
+    <button class="win-btn" onclick="window.location.href='index.html'">← DESKTOP</button>
+    <span id="top-msg">STUDIO MURENA: SELECT HERO</span>
+    <button class="win-btn" id="btn-pause" style="display: none;" onclick="togglePause()">II PAUSE</button>
+</div>
+
+<div id="game-container">
+    <div id="selection-screen" class="bg-select-ch">
+        <div id="grid" class="grid"></div>
+        <div id="char-name" style="margin-top: 20px; color: #ffcc00; text-shadow: 2px 2px #000;">SELECT HERO</div>
+    </div>
+    
+    <div id="round-msg">ROUND 1</div>
+
+    <div id="pause-screen" class="overlay">
+        <h1>PAUSED</h1>
+        <button class="win-btn" style="font-size: 14px; padding: 10px;" onclick="togglePause()">RESUME</button>
+        <button class="win-btn" style="font-size: 14px; padding: 10px; margin-top: 10px;" onclick="resetToMenu()">QUIT TO MENU</button>
+    </div>
+
+    <!-- Schermata Fine Partita -->
+    <div id="end-screen" class="overlay">
+        <h1 id="end-title">YOU WIN!</h1>
+        <button class="win-btn" style="font-size: 14px; padding: 10px;" onclick="handleEndScreen()">CONTINUE</button>
+    </div>
+
+    <!-- Schermata di Sblocco -->
+    <div id="unlock-screen" class="overlay">
+        <h1>NEW CHALLENGER<br>UNLOCKED!</h1>
+        <p id="unlock-text" style="color: white; margin-bottom: 30px; font-size: 14px; text-shadow: 1px 1px #000;"></p>
+        <button class="win-btn" style="font-size: 14px; padding: 10px;" onclick="resetToMenu()">AWESOME!</button>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="450"></canvas>
+</div>
+
+<div id="controls">
+    <div class="d-pad">
+        <div class="joy-btn" id="btn-j">▲</div>
+        <div class="joy-btn" id="btn-l">◄</div>
+        <div class="joy-btn" id="btn-r">►</div>
+    </div>
+    <div class="action-buttons">
+        <div class="action-btn blue" id="btn-d">DODGE</div>
+        <div class="action-btn red" id="btn-a">ATK</div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // CACHE ENGINE
+    const imageCache = {};
+    function getImage(src) {
+        if (!imageCache[src]) {
+            const img = new Image(); img.src = src; imageCache[src] = img;
+        }
+        return imageCache[src];
+    }
+
+    // AUDIO DI SOTTOFONDO: Volumi Abbassati
+    const menuMusic = new Audio('assets/Jazzhighlanders_8bit_F.wav');
+    menuMusic.loop = true; 
+    menuMusic.volume = 0.3; // Musica Menu Più Bassa
+
+    const stageMusic = new Audio();
+    stageMusic.loop = true; 
+    stageMusic.volume = 0.2; // Musica Stage Bassa, per dare spazio ai Sample!
+
+    // SUONI SFX DI GIOCO: Volumi Alti
+    const sfx = {
+        r1: new Audio('assets/round-one-fight.mp3'),
+        r2: new Audio('assets/round-two-fight.mp3'),
+        r3: new Audio('assets/final-round-fight.mp3'),
+        win: new Audio('assets/youwin.mp3'),
+        lose: new Audio('assets/youloose.mp3')
+    };
+
+    let audioUnlocked = false;
+
+    // Sblocco Audio Silenzioso e pulito
+    function unlockAudio() {
+        if (audioUnlocked) return;
+        
+        if (mode === "SELECT") {
+            menuMusic.play().catch(e => console.log("Init menu err", e));
+        }
+        audioUnlocked = true;
+    }
+
+    document.addEventListener('click', unlockAudio, { once: true });
+    document.addEventListener('touchstart', unlockAudio, { once: true });
+    document.addEventListener('keydown', unlockAudio, { once: true });
+
+    function playSfx(audioObj) {
+        if (!audioObj) return;
+        audioObj.volume = 1.0; // Volume sempre al massimo per gli SFX
+        audioObj.currentTime = 0;
+        audioObj.play().catch(e => console.log("Audio SFX blocked:", e));
+    }
+
+    // LA LISTA ESATTA DEGLI MP3 SU GITHUB PER IL CHECK
+    const validCharSfxList = [
+        'baba-attack.mp3', 'baba-hurt.mp3', 'baba-loose.mp3', 'baba-win.mp3',
+        'beeman-attack.mp3', 'beeman-hurt.mp3', 'beeman-loose.mp3',
+        'britney-attack.mp3', 'britney-bitch.mp3', 'britney-hurt.mp3', 'britney-loose.mp3',
+        'carma2-attack.mp3', 'carma2-hurt.mp3', 'carma2-loose.mp3', 'carma2-win.mp3',
+        'chronomutant-attack.mp3', 'chronomutant-hurt.mp3', 'chronomutant-loose.mp3', 'chronomutant-win.mp3',
+        'doom-attack.mp3', 'doom-hurt.mp3', 'doom-loose.mp3', 'doom-not-surrender.mp3',
+        'falcon2-attack.mp3', 'falcon2-hurt.mp3', 'falcon2-loose.mp3', 'falcon2-win.mp3',
+        'ferraz2-attack.mp3', 'ferraz2-hurt.mp3', 'ferraz2-loose.mp3', 'ferraz2-win.mp3',
+        'freq-ghoul--hurt.mp3', 'freq-ghoul-attack.mp3', 'freq-ghoul-loose.mp3', 'freq-ghoul-win.mp3',
+        'ljs-attack.mp3', 'ljs-hurt.mp3', 'ljs-loose.mp3', 'ljs-win.mp3',
+        'mauri2-attack.mp3', 'mauri2-hurt.mp3', 'mauri2-loose.mp3', 'mauri2-win.mp3',
+        'mclovin-attack.mp3', 'mclovin-hurt.mp3', 'mclovin-loose.mp3', 'mclovin-win.mp3',
+        'mfdoom-attack.mp3', 'mfdoom-hurt.mp3', 'mfdoom-loose.mp3', 'mfdoom-win.mp3',
+        'murena-attack.mp3', 'murena-hurt.mp3', 'murena-loose.mp3', 'murena-win.mp3',
+        'nan2-attack.mp3', 'nan2-hurt.mp3', 'nan2-loose.mp3', 'nan2-win.mp3',
+        'ornitorincoman-attack.mp3', 'ornitorincoman-hurt.mp3', 'ornitorincoman-loose.mp3', 'ornitorincoman-win.mp3',
+        'pigeon-attack.mp3', 'pigeon-hurt.mp3', 'pigeon-loose.mp3', 'pigeon-win.mp3'
+    ];
+
+    // FUNZIONE BLINDATA PER I VERSI DEI PERSONAGGI
+    function playCharSfx(spriteId, action) {
+        let audioName = `${spriteId}-${action}`;
+
+        // FIX nomi differenti tra spriteId e nomi dei file
+        if (spriteId === 'orologioman') audioName = `chronomutant-${action}`;
+        if (spriteId === 'radioman') {
+            if (action === 'hurt') audioName = 'freq-ghoul--hurt'; // FIX doppio trattino
+            else audioName = `freq-ghoul-${action}`;
+        }
+        
+        // Eccezioni speciali
+        if (spriteId === 'britney' && (action === 'select' || action === 'win')) {
+            audioName = 'britney-bitch';
+        }
+        if (spriteId === 'doom' && (action === 'select' || action === 'win')) {
+            audioName = 'doom-not-surrender';
+        }
+
+        let fileName = `${audioName}.mp3`;
+        
+        // Controlla se il file esiste davvero per non causare errori 404 in console
+        if (validCharSfxList.includes(fileName)) {
+            let audio = new Audio(`assets/${fileName}`);
+            audio.volume = 1.0; // Effetti al MASSIMO
+            audio.play().catch(e => console.log(`Audio bloccato dal browser: assets/${fileName}`));
+        }
+    }
+
+    // SISTEMA DI SALVATAGGIO PROGRESSI DI SESSIONE
+    let totalWins = parseInt(sessionStorage.getItem('murenaWins') || '0');
+    let pendingUnlockMessage = ""; 
+
+    // ASSETS & PROGRESSIONE
+    const heroes = [
+        { spriteId: 'carma2', name: 'CARMA', req: 0 },
+        { spriteId: 'ferraz2', name: 'FERRAZ', req: 0 },
+        { spriteId: 'nan2', name: 'NAN', req: 0 },
+        { spriteId: 'mauri2', name: 'MAURI', req: 0 },
+        { spriteId: 'falcon2', name: 'FALCON', req: 0 },
+        { spriteId: 'ljs', name: 'LONG JOHN SILVER', req: 1 },
+        { spriteId: 'mclovin', name: 'MCLOVIN', req: 2 },
+        { spriteId: 'britney', name: 'BRITNEY', req: 3 },
+        { spriteId: 'mfdoom', name: 'MF DOOM', req: 4 }
+    ];
+
+    const enemiesList = [
+        { spriteId: 'baba', name: 'BABA', req: 0 },
+        { spriteId: 'beeman', name: 'BEEMAN', req: 0 },
+        { spriteId: 'orologioman', name: 'CHRONOMUTANT', req: 0 },
+        { spriteId: 'radioman', name: 'FREQ-GHOUL', req: 0 },
+        { spriteId: 'murena', name: 'MURENA', req: 1 },
+        { spriteId: 'pigeon', name: 'PIGEON', req: 2 },
+        { spriteId: 'ornitorincoman', name: 'ORNITORINCO', req: 3 },
+        { spriteId: 'doom', name: 'DOOM', req: 4 }
+    ];
+
+    // TUTTI I BACKGROUND
+    const stages = [
+        { name: 'RUSTWATER', bg: 'assets/metro.gif', music: 'assets/rustwater.mp3' },
+        { name: 'COLLAPSE POINT', bg: 'assets/buconero.gif', music: 'assets/collapsepoint.mp3' },
+        { name: 'RAIN RED', bg: 'assets/rainred.gif', music: 'assets/rainred.mp3' },
+        { name: 'FLAMES UPSTAIRS', bg: 'assets/onfire.gif', music: 'assets/flamesupstairs.mp3' },
+        { name: 'EAST END RAIN', bg: 'assets/rain.gif', music: 'assets/eastendrain.mp3' },
+        { name: 'EMPTY BARRIER', bg: 'assets/railway.gif', music: 'assets/emptybarrier.mp3' },
+        { name: 'BADLANDS', bg: 'assets/madmax.gif', music: 'assets/badlands.mp3' },
+        { name: 'JUNGLE CRASH', bg: 'assets/jungla.gif', music: 'assets/junglecrashland.mp3' },
+        { name: 'SEA GLASS', bg: 'assets/acquario.gif', music: 'assets/seaglass.mp3' },
+        { name: 'FISHING HARBOR', bg: 'assets/barchette.gif', music: 'assets/fishingharbor.mp3' },
+        { name: 'PLATFORM 7', bg: 'assets/treni.gif', music: 'assets/platform7.mp3' },
+        { name: "FORTUNE'S END", bg: 'assets/maga.gif', music: 'assets/fortunesend.mp3' },
+        { name: 'DEPARTURE GATE', bg: 'assets/airport.gif', music: 'assets/departuregate.mp3' },
+        { name: 'LIONGATE', bg: 'assets/china.gif', music: 'assets/lionsgate.mp3', zoom: 1.15 },
+        { name: 'EMBER SEAS', bg: 'assets/pirati.gif', music: 'assets/emberseas.mp3' },
+        { name: 'FIESTA', bg: 'assets/mexico.webp', music: 'assets/fiesta.mp3' }
+    ];
+
+    // VARIABILI GLOBALI E FISICA SCALATA
+    let selectState = 0; 
+    let mode = "SELECT"; 
+    let p1Char = null; let cpuChar = null; let currentStage = null;
+
+    let matchTimer = 99; let framesCounter = 0;
+    let currentRound = 1; let p1Wins = 0; let cpuWins = 0;
+
+    const SPRITE_SIZE = 290; 
+    const GROUND_Y = 450; 
+
+    let p1 = { x: 80, y: GROUND_Y, hp: 100, state: 'idle', frame: 0, dir: 1, vy: 0, timer: 0, deadTimer: 0 };
+    let cpu = { x: 430, y: GROUND_Y, hp: 100, state: 'idle', frame: 0, dir: -1, vy: 0, timer: 0, deadTimer: 0 };
+
+    // INPUT
+    const keys = { l: 0, r: 0, j: 0, a: 0, d: 0 };
+    const setup = (id, k) => {
+        const b = document.getElementById(id);
+        b.ontouchstart = (e) => { e.preventDefault(); keys[k] = 1; };
+        b.ontouchend = (e) => { e.preventDefault(); keys[k] = 0; };
+        b.onmousedown = () => keys[k] = 1;
+        b.onmouseup = () => keys[k] = 0;
+    };
+    setup('btn-l', 'l'); setup('btn-r', 'r'); setup('btn-j', 'j'); setup('btn-a', 'a'); setup('btn-d', 'd');
+
+    window.onkeydown = (e) => {
+        if(e.code === 'ArrowLeft') keys.l = 1; if(e.code === 'ArrowRight') keys.r = 1;
+        if(e.code === 'ArrowUp') keys.j = 1; if(e.code === 'Space') keys.a = 1;
+        if(e.code === 'ShiftLeft') keys.d = 1;
+        if(e.code === 'Escape' && mode.includes('FIGHT')) togglePause();
+    };
+    window.onkeyup = (e) => {
+        if(e.code === 'ArrowLeft') keys.l = 0; if(e.code === 'ArrowRight') keys.r = 0;
+        if(e.code === 'ArrowUp') keys.j = 0; if(e.code === 'Space') keys.a = 0;
+        if(e.code === 'ShiftLeft') keys.d = 0;
+    };
+
+    function loadSelectionScreen() {
+        const grid = document.getElementById('grid');
+        const screen = document.getElementById('selection-screen');
+        const title = document.getElementById('char-name');
+        grid.innerHTML = '';
+        
+        canvas.style.backgroundImage = 'none';
+        
+        if (audioUnlocked && mode === "SELECT" && menuMusic.paused) {
+            menuMusic.play().catch(e => {});
+        }
+
+        if (selectState === 0) {
+            grid.className = 'grid'; 
+            screen.className = 'bg-select-ch'; title.innerText = 'SELECT HERO';
+            heroes.forEach(c => {
+                const d = document.createElement('div'); d.className = 'cell';
+                if (totalWins >= c.req) {
+                    d.style.backgroundImage = `url('assets/${c.spriteId}-idle.png')`;
+                    d.onclick = () => { 
+                        p1Char = c; 
+                        playCharSfx(c.spriteId, 'select');
+                        selectState = 1; 
+                        loadSelectionScreen(); 
+                    };
+                } else {
+                    d.classList.add('locked');
+                }
+                grid.appendChild(d);
+            });
+        } else if (selectState === 1) {
+            grid.className = 'grid'; 
+            screen.className = 'bg-select-en'; title.innerText = 'SELECT OPPONENT'; title.style.color = '#fff';
+            enemiesList.forEach(c => {
+                const d = document.createElement('div'); d.className = 'cell';
+                if (totalWins >= c.req) {
+                    d.style.backgroundImage = `url('assets/${c.spriteId}-idle.png')`;
+                    d.onclick = () => { 
+                        cpuChar = c; 
+                        playCharSfx(c.spriteId, 'select');
+                        selectState = 2; 
+                        loadSelectionScreen(); 
+                    };
+                } else {
+                    d.classList.add('locked');
+                }
+                grid.appendChild(d);
+            });
+        } else if (selectState === 2) {
+            grid.className = 'scrolling-grid'; 
+            screen.className = 'bg-select-am'; title.innerText = 'SELECT STAGE'; title.style.color = '#00ffff';
+            stages.forEach(s => {
+                const d = document.createElement('div'); d.className = 'stage-cell';
+                d.style.backgroundImage = `url('${s.bg}')`;
+                
+                const label = document.createElement('div');
+                label.className = 'stage-name';
+                label.innerText = s.name;
+                d.appendChild(label);
+
+                d.onclick = () => { currentStage = s; startMatch(); };
+                grid.appendChild(d);
+            });
+        }
+    }
+
+    function startMatch() {
+        document.getElementById('selection-screen').style.display = 'none';
+        document.getElementById('controls').style.visibility = 'visible';
+        document.getElementById('btn-pause').style.display = 'block';
+        document.getElementById('top-msg').innerText = "FIGHT!";
+        
+        menuMusic.pause();
+        menuMusic.currentTime = 0;
+
+        stageMusic.src = currentStage.music;
+        stageMusic.play().catch(e => console.log("Autoplay blocked for stage music."));
+
+        canvas.style.backgroundImage = `url('${currentStage.bg}')`;
+        canvas.style.backgroundPosition = 'center';
+        if (currentStage.zoom) {
+            canvas.style.backgroundSize = `${currentStage.zoom * 100}%`;
+        } else {
+            canvas.style.backgroundSize = 'cover';
+        }
+
+        const anims = ['idle', 'run', 'attack', 'dodge', 'hurt'];
+        anims.forEach(st => {
+            getImage(`assets/${p1Char.spriteId}-${st}.png`);
+            getImage(`assets/${cpuChar.spriteId}-${st}.png`);
+        });
+
+        p1Wins = 0; cpuWins = 0; currentRound = 1;
+        startRound();
+    }
+
+    function startRound() {
+        mode = "ROUND_OVER";
+        p1.hp = 100; p1.x = 80; p1.y = GROUND_Y; p1.state = 'idle'; p1.timer = 0; p1.vy = 0; p1.deadTimer = 0;
+        cpu.hp = 100; cpu.x = 430; cpu.y = GROUND_Y; cpu.state = 'idle'; cpu.timer = 0; cpu.vy = 0; cpu.deadTimer = 0;
+        matchTimer = 99; framesCounter = 0;
+        
+        if (currentRound === 1) playSfx(sfx.r1);
+        else if (currentRound === 2) playSfx(sfx.r2);
+        else playSfx(sfx.r3);
+
+        const msg = document.getElementById('round-msg');
+        msg.innerText = currentRound >= 3 ? "FINAL ROUND" : `ROUND ${currentRound}`;
+        msg.style.visibility = 'visible';
+        
+        setTimeout(() => {
+            msg.innerText = "FIGHT!";
+            setTimeout(() => { msg.style.visibility = 'hidden'; mode = "FIGHT"; }, 1000);
+        }, 1500);
+    }
+
+    function togglePause() {
+        if(mode === "FIGHT") {
+            mode = "PAUSE"; 
+            stageMusic.pause(); 
+            document.getElementById('pause-screen').style.visibility = 'visible';
+        } else if (mode === "PAUSE") {
+            mode = "FIGHT"; 
+            stageMusic.play(); 
+            document.getElementById('pause-screen').style.visibility = 'hidden';
+        }
+    }
+
+    function resetToMenu() {
+        stageMusic.pause();
+        stageMusic.currentTime = 0;
+
+        document.getElementById('end-screen').style.visibility = 'hidden';
+        document.getElementById('unlock-screen').style.visibility = 'hidden';
+        document.getElementById('pause-screen').style.visibility = 'hidden';
+        document.getElementById('controls').style.visibility = 'hidden';
+        document.getElementById('btn-pause').style.display = 'none';
+        document.getElementById('selection-screen').style.display = 'flex';
+        
+        mode = "SELECT";
+        selectState = 0; p1Char = null; cpuChar = null; currentStage = null;
+        loadSelectionScreen();
+    }
+
+    function handleEndScreen() {
+        document.getElementById('end-screen').style.visibility = 'hidden';
+        if (pendingUnlockMessage !== "") {
+            document.getElementById('unlock-text').innerText = pendingUnlockMessage;
+            document.getElementById('unlock-screen').style.visibility = 'visible';
+            pendingUnlockMessage = ""; 
+        } else {
+            resetToMenu();
+        }
+    }
+
+    function drawFighter(f, spriteId) {
+        if (f.state === 'dead') {
+            f.deadTimer++;
+            if (f.deadTimer > 40) return; 
+        }
+
+        let drawState = f.state;
+        if (drawState === 'dodge' || drawState === 'dead') drawState = 'idle';
+
+        let finalImg = getImage(`assets/${spriteId}-${drawState}.png`);
+        
+        if (!finalImg.complete || finalImg.naturalWidth === 0) { 
+            drawState = 'idle';
+            finalImg = getImage(`assets/${spriteId}-idle.png`);
+        }
+        
+        if (!finalImg.complete || finalImg.naturalWidth === 0) return;
+
+        const frameW = finalImg.width / 5; const frameH = finalImg.height / 5;
+        const sx = (f.frame % 5) * frameW; const sy = Math.floor(f.frame / 5) * frameH;
+
+        ctx.save();
+        
+        let offsetX = 0; let offsetY = 0;
+        if (f.state === 'dead') {
+            offsetX = (Math.random() - 0.5) * 15;
+            offsetY = (Math.random() - 0.5) * 15;
+            ctx.translate(offsetX, offsetY);
+            
+            ctx.globalAlpha = Math.max(0, 1 - (f.deadTimer / 40)); 
+            
+            if (f.deadTimer % 8 < 4) {
+                ctx.filter = "brightness(5) contrast(2) saturate(10)";
+            }
+        } else if (f.state === 'hurt') {
+            ctx.filter = "brightness(1.5) sepia(0.5) hue-rotate(-20deg) saturate(3)";
+        } else if (f.state === 'dodge') {
+            ctx.globalAlpha = 0.5; 
+        }
+
+        if (f.dir === -1) {
+            ctx.translate(f.x + SPRITE_SIZE, f.y); ctx.scale(-1, 1);
+            ctx.drawImage(finalImg, sx, sy, frameW, frameH, 0, -SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE);
+        } else {
+            ctx.drawImage(finalImg, sx, sy, frameW, frameH, f.x, f.y - SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE);
+        }
+        ctx.restore();
+
+        if (Date.now() % 100 < 50 && f.state !== 'hurt' && f.state !== 'dodge' && f.state !== 'dead') {
+            f.frame = (f.frame + 1) % 25;
+        }
+    }
+
+    function updateFighterParams(f, isPlayer, spriteId) {
+        f.y += f.vy; 
+        if (f.y < GROUND_Y) f.vy += 1; else { f.y = GROUND_Y; f.vy = 0; }
+
+        if (f.x < 0) f.x = 0;
+        if (f.x > 800 - SPRITE_SIZE) f.x = 800 - SPRITE_SIZE;
+
+        if (f.hp <= 0) {
+            if (f.state !== 'dead') {
+                f.state = 'dead';
+                f.deadTimer = 0;
+                playCharSfx(spriteId, 'loose'); 
+            }
+            return;
+        }
+
+        if (f.timer > 0) { f.timer--; if (f.timer <= 0) f.state = 'idle'; }
+        if (f.state === 'hurt' || f.state === 'dodge' || f.state === 'attack') return;
+
+        if (isPlayer) {
+            let enemyDist = cpu.x - f.x;
+            if (keys.l) { f.x -= 6; f.state = 'run'; f.dir = -1; }
+            else if (keys.r) { f.x += 6; f.state = 'run'; f.dir = 1; }
+            else { f.state = 'idle'; f.dir = enemyDist > 0 ? 1 : -1; }
+
+            if (keys.j && f.y >= GROUND_Y) f.vy = -16; 
+            
+            if (keys.d) { f.state = 'dodge'; f.timer = 20; f.x -= f.dir * 50; } 
+            else if (keys.a) { 
+                f.state = 'attack'; f.timer = 25; 
+                playCharSfx(spriteId, 'attack'); 
+            }
+        } else {
+            let dist = p1.x - f.x;
+            f.dir = dist > 0 ? 1 : -1;
+            
+            if (Math.abs(dist) > 190) {
+                f.x += f.dir * 3; f.state = 'run';
+            } else {
+                f.state = 'idle';
+                let rand = Math.random();
+                if (rand < 0.04) { 
+                    f.state = 'attack'; f.timer = 25; 
+                    playCharSfx(spriteId, 'attack'); 
+                }
+                else if (rand > 0.98 && p1.state === 'attack') { f.state = 'dodge'; f.timer = 20; f.x -= f.dir * 50; }
+            }
+        }
+    }
+
+    function checkHitbox(attacker, defender, defSpriteId) {
+        if (defender.state === 'dead') return false; 
+        
+        if (attacker.state === 'attack' && attacker.timer === 15) { 
+            let relativeDist = (defender.x - attacker.x) * attacker.dir;
+            if (relativeDist > -60 && relativeDist < 200 && Math.abs(attacker.y - defender.y) < 150) {
+                if (defender.state !== 'dodge' && defender.state !== 'hurt') {
+                    defender.state = 'hurt';
+                    defender.timer = 20; 
+                    defender.hp -= 15; 
+                    defender.x += attacker.dir * 30; 
+                    playCharSfx(defSpriteId, 'hurt'); 
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    function checkRoundEnd() {
+        if (p1.hp <= 0 || cpu.hp <= 0 || matchTimer <= 0) {
+            if (mode === "FIGHT") {
+                mode = "ROUND_OVER";
+                let msg = "";
+                if (p1.hp > cpu.hp) { p1Wins++; msg = `${p1Char.name} WINS ROUND`; }
+                else if (cpu.hp > p1.hp) { cpuWins++; msg = `${cpuChar.name} WINS ROUND`; }
+                else { msg = "DRAW ROUND"; } 
+
+                document.getElementById('round-msg').innerText = msg;
+                document.getElementById('round-msg').style.visibility = 'visible';
+
+                setTimeout(() => {
+                    document.getElementById('round-msg').style.visibility = 'hidden';
+                    if (p1Wins >= 2 || cpuWins >= 2) {
+                        
+                        let wonMatch = (p1Wins >= 2);
+                        mode = "END";
+                        
+                        stageMusic.pause();
+                        
+                        if (wonMatch) {
+                            playSfx(sfx.win);
+                            playCharSfx(p1Char.spriteId, 'win');
+                        } else {
+                            playSfx(sfx.lose);
+                            playCharSfx(cpuChar.spriteId, 'win'); 
+                        }
+
+                        document.getElementById('end-title').innerText = wonMatch ? "YOU WIN!" : "GAME OVER";
+                        document.getElementById('end-title').style.color = wonMatch ? "#ffcc00" : "#ff0000";
+                        
+                        if (wonMatch) {
+                            totalWins++;
+                            sessionStorage.setItem('murenaWins', totalWins);
+                            
+                            if (totalWins === 1) pendingUnlockMessage = "HERO: LONG JOHN SILVER\nENEMY: MURENA";
+                            else if (totalWins === 2) pendingUnlockMessage = "HERO: MCLOVIN\nENEMY: PIGEON";
+                            else if (totalWins === 3) pendingUnlockMessage = "HERO: BRITNEY\nENEMY: ORNITORINCO";
+                            else if (totalWins === 4) pendingUnlockMessage = "HERO: MF DOOM\nENEMY: DOOM";
+                        }
+
+                        document.getElementById('end-screen').style.visibility = 'visible';
+                    } else {
+                        currentRound++;
+                        startRound();
+                    }
+                }, 3000);
+            }
+        }
+    }
+
+    function update() {
+        if (mode !== "FIGHT" && mode !== "ROUND_OVER") return;
+
+        if (mode === "FIGHT") {
+            framesCounter++;
+            if (framesCounter >= 60) {
+                matchTimer--; framesCounter = 0;
+            }
+        }
+
+        updateFighterParams(p1, true, p1Char.spriteId);
+        updateFighterParams(cpu, false, cpuChar.spriteId);
+
+        checkHitbox(p1, cpu, cpuChar.spriteId);
+        checkHitbox(cpu, p1, p1Char.spriteId);
+
+        checkRoundEnd();
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, 800, 450);
+
+        if (mode !== "SELECT" && currentStage) {
+            ctx.fillStyle = "#444"; ctx.fillRect(45, 15, 310, 20); ctx.fillRect(445, 15, 310, 20);
+            ctx.fillStyle = "red"; ctx.fillRect(50, 17, 300, 16); ctx.fillRect(450, 17, 300, 16);
+            
+            ctx.fillStyle = "yellow"; 
+            let p1hp = Math.max(0, p1.hp); let cpuhp = Math.max(0, cpu.hp);
+            ctx.fillRect(50, 17, p1hp * 3, 16); 
+            ctx.fillRect(450 + (300 - cpuhp * 3), 17, cpuhp * 3, 16);
+
+            ctx.fillStyle = "#fff"; ctx.font = "12px 'Press Start 2P'";
+            ctx.fillText(p1Char.name, 50, 48);
+            ctx.fillText(cpuChar.name, 750 - ctx.measureText(cpuChar.name).width, 48);
+
+            ctx.fillStyle = p1Wins >= 1 ? "#ffcc00" : "#444"; ctx.beginPath(); ctx.arc(55, 60, 5, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = p1Wins >= 2 ? "#ffcc00" : "#444"; ctx.beginPath(); ctx.arc(70, 60, 5, 0, Math.PI*2); ctx.fill();
+            
+            ctx.fillStyle = cpuWins >= 1 ? "#ffcc00" : "#444"; ctx.beginPath(); ctx.arc(745, 60, 5, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = cpuWins >= 2 ? "#ffcc00" : "#444"; ctx.beginPath(); ctx.arc(730, 60, 5, 0, Math.PI*2); ctx.fill();
+
+            ctx.fillStyle = "#fff"; ctx.font = "24px 'Press Start 2P'";
+            ctx.fillText(matchTimer, 400 - ctx.measureText(matchTimer).width/2, 35);
+
+            drawFighter(p1, p1Char.spriteId);
+            drawFighter(cpu, cpuChar.spriteId);
+        }
+        requestAnimationFrame(draw);
+    }
+
+    loadSelectionScreen();
+    setInterval(update, 1000/60);
+    draw();
+</script>
+</body>
+</html>
