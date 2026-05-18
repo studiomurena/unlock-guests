@@ -10,6 +10,7 @@
     <link rel="preload" as="image" href="assets/bkg2.png">
     <link rel="preload" as="image" href="assets/bkg3.png">
     <link rel="preload" as="image" href="assets/anonimo.png">
+    <link rel="preload" as="image" href="assets/unlocked.gif">
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -49,10 +50,10 @@
             position: absolute; inset: 0; 
             display: flex; flex-direction: column; align-items: center;
             z-index: 10; text-align: center;
-            background: transparent; /* Il canvas farà da sfondo */
+            background: transparent;
         }
 
-        /* SCROLLING ORIZZONTALE UNIFICATO (Personaggi e Stage) */
+        /* SCROLLING ORIZZONTALE UNIFICATO */
         .scrolling-grid {
             display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
             gap: 12px; width: 100%; padding: 15px 10px; box-sizing: border-box;
@@ -289,7 +290,7 @@
         }
     }
 
-    // LISTA ASSETS GIA' COMPRENSIVA DI STATO LOCKED FISSO
+    // LISTA ASSETS GIA' COMPRENSIVA DI STATO LOCKED FISSO (Aggiornato dutchnazari)
     const heroes = [
         { spriteId: 'carma2', name: 'CARMA', isLocked: false },
         { spriteId: 'ferraz2', name: 'FERRAZ', isLocked: false },
@@ -297,7 +298,7 @@
         { spriteId: 'mauri2', name: 'MAURI', isLocked: false },
         { spriteId: 'falcon2', name: 'FALCON', isLocked: false },
         { spriteId: 'arya', name: 'ARYA', isLocked: true },
-        { spriteId: 'dutch', name: 'DUTCH', isLocked: true },
+        { spriteId: 'dutchnazari', name: 'DUTCH NAZARI', isLocked: true },
         { spriteId: 'ljs', name: 'LONG JOHN SILVER', isLocked: true },
         { spriteId: 'mclovin', name: 'MCLOVIN', isLocked: true },
         { spriteId: 'britney', name: 'BRITNEY', isLocked: true },
@@ -349,7 +350,7 @@
     let p1 = { x: 80, y: GROUND_Y, hp: 100, state: 'idle', frame: 0, dir: 1, vy: 0, timer: 0, deadTimer: 0 };
     let cpu = { x: 430, y: GROUND_Y, hp: 100, state: 'idle', frame: 0, dir: -1, vy: 0, timer: 0, deadTimer: 0 };
 
-    // INPUT (CORREZIONE SINTASSI QUI)
+    // INPUT
     const keys = { l: 0, r: 0, j: 0, a: 0, d: 0 };
     const setup = (id, k) => {
         const b = document.getElementById(id);
@@ -400,8 +401,8 @@
         mode = "GUEST_UNLOCK";
         document.getElementById('selection-screen').style.display = 'none';
         
-        let randStage = stages[Math.floor(Math.random() * stages.length)];
-        canvas.style.backgroundImage = `url('${randStage.bg}')`;
+        // Sfondo fisso per lo sblocco
+        canvas.style.backgroundImage = `url('assets/unlocked.gif')`;
         canvas.style.backgroundSize = 'cover';
         canvas.style.backgroundPosition = 'center';
 
@@ -768,34 +769,67 @@
                 ctx.fillRect(0,0,800,450);
             }
 
-            // Preview del personaggio selezionato sul lato sinistro
+            // Preview del personaggio selezionato sul lato sinistro o destro
             if ((selectState === 0 || selectState === 1) && hoverChar) {
-                let drawState = Math.floor(Date.now() / 1500) % 2 === 0 ? 'idle' : 'attack';
-                let finalImg = getImage(`assets/${hoverChar.spriteId}-${drawState}.png`);
                 
-                if (finalImg.complete && finalImg.naturalWidth > 0) {
-                    const frameW = finalImg.width / 5; const frameH = finalImg.height / 5;
-                    const frame = Math.floor(Date.now() / 50) % 25;
-                    const sx = (frame % 5) * frameW; const sy = Math.floor(frame / 5) * frameH;
-                    
-                    ctx.save();
-                    ctx.translate(180, 360); // Posizione a sinistra
-                    
-                    if (selectState === 1) {
-                        ctx.scale(-2.2, 2.2); // Gira il nemico
-                    } else {
-                        ctx.scale(2.2, 2.2); // Ingrandito
+                // Disegna Anonimo se è bloccato (NO SPOILER!)
+                if (hoverChar.isLocked) {
+                    let anonimoImg = getImage('assets/anonimo.png');
+                    if (anonimoImg.complete && anonimoImg.naturalWidth > 0) {
+                        let drawW = 256; let drawH = 256;
+                        let xCenter = selectState === 0 ? 200 : 600;
+                        let yPos = 80;
+                        ctx.drawImage(anonimoImg, xCenter - drawW/2, yPos, drawW, drawH);
+                        
+                        ctx.fillStyle = "#ff0000"; ctx.font = "16px 'Press Start 2P'"; ctx.textAlign = "center";
+                        ctx.fillText("LOCKED", xCenter, yPos + drawH + 40);
+                    }
+                } 
+                else {
+                    // Imposta l'animazione corretta
+                    let drawState = 'idle';
+                    // Dutch Nazari e Arya rimangono rigorosamente in idle
+                    if (hoverChar.spriteId !== 'arya' && hoverChar.spriteId !== 'dutchnazari') {
+                        drawState = Math.floor(Date.now() / 1500) % 2 === 0 ? 'idle' : 'attack';
                     }
                     
-                    ctx.drawImage(finalImg, sx, sy, frameW, frameH, -SPRITE_SIZE/2, -SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE);
-                    ctx.restore();
+                    let finalImg = getImage(`assets/${hoverChar.spriteId}-${drawState}.png`);
                     
-                    // Disegna il nome e lo stato
-                    ctx.fillStyle = "#fff"; ctx.font = "16px 'Press Start 2P'"; ctx.textAlign = "center";
-                    ctx.fillText(hoverChar.name, 180, 400);
-                    if (hoverChar.isLocked) {
-                        ctx.fillStyle = "#ff0000";
-                        ctx.fillText("LOCKED", 180, 425);
+                    // Fallback di sicurezza in caso non carichi l'attack
+                    if (!finalImg.complete || finalImg.naturalWidth === 0) {
+                        finalImg = getImage(`assets/${hoverChar.spriteId}-idle.png`);
+                    }
+
+                    if (finalImg.complete && finalImg.naturalWidth > 0) {
+                        const frameW = finalImg.width / 5; const frameH = finalImg.height / 5;
+                        const frame = Math.floor(Date.now() / 50) % 25;
+                        const sx = (frame % 5) * frameW; const sy = Math.floor(frame / 5) * frameH;
+                        
+                        ctx.save();
+                        
+                        // Grandezza massiccia per la preview
+                        let scale = 2.4; 
+                        let drawW = SPRITE_SIZE * scale;
+                        let drawH = SPRITE_SIZE * scale;
+                        
+                        // Posizionamento: Eroi a sx (200), Nemici a dx (600)
+                        let xAnchor = selectState === 0 ? 200 : 600;
+                        // Ancoraggio asse Y molto in alto (-40) così la testa sta perfettamente nello schermo e i piedi svaniscono in basso
+                        let yAnchor = -40;
+                        
+                        ctx.translate(xAnchor, yAnchor);
+                        
+                        if (selectState === 1) { 
+                            ctx.scale(-1, 1); // Ruota il nemico per guardare verso l'eroe
+                        }
+                        
+                        // Centrato sull'ancora X
+                        ctx.drawImage(finalImg, sx, sy, frameW, frameH, -drawW/2, 0, drawW, drawH);
+                        ctx.restore();
+                        
+                        // Disegna il nome e lo stato
+                        ctx.fillStyle = "#fff"; ctx.font = "16px 'Press Start 2P'"; ctx.textAlign = "center";
+                        ctx.fillText(hoverChar.name, xAnchor, 420);
                     }
                 }
             }
@@ -830,8 +864,9 @@
         requestAnimationFrame(draw);
     }
 
-    // Aggiungi anonimo alle immagini precacheate per evitare rallentamenti
+    // Aggiungi anonimo e unlocked alle immagini precacheate per evitare rallentamenti
     getImage('assets/anonimo.png');
+    getImage('assets/unlocked.gif');
 
     loadSelectionScreen();
     setInterval(update, 1000/60);
