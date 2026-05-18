@@ -189,7 +189,7 @@
     <!-- NUOVA Schermata di Sblocco Speciale (Arya & Dutch) -->
     <div id="special-unlock-screen" class="overlay" style="background: rgba(0,0,0,0.5); justify-content: flex-start; padding-top: 40px;">
         <h1 style="color: #00ffff; text-shadow: 3px 3px #000;">NEW HEROES!</h1>
-        <p style="color: white; font-size: 12px; text-shadow: 2px 2px #000; margin-bottom: 20px; line-height: 1.6;">ARYA & DUTCH HAVE JOINED THE FIGHT!<br>(L.J.S. & Murena unlocked too)</p>
+        <p style="color: white; font-size: 12px; text-shadow: 2px 2px #000; margin-bottom: 20px; line-height: 1.6;">ARYA & DUTCH HAVE JOINED THE FIGHT!</p>
         <button class="win-btn" style="font-size: 16px; padding: 15px; margin-top: auto; margin-bottom: 40px;" onclick="resetToMenu()">LET'S GO!</button>
     </div>
 
@@ -303,19 +303,19 @@
     let pendingUnlockMessage = ""; 
     let pendingSpecialUnlock = false; // Flag per lo showcase di Arya & Dutch
 
-    // ASSETS & PROGRESSIONE
+    // ASSETS & PROGRESSIONE CON SBLOCCHI SLITTATI
     const heroes = [
         { spriteId: 'carma2', name: 'CARMA', req: 0 },
         { spriteId: 'ferraz2', name: 'FERRAZ', req: 0 },
         { spriteId: 'nan2', name: 'NAN', req: 0 },
         { spriteId: 'mauri2', name: 'MAURI', req: 0 },
         { spriteId: 'falcon2', name: 'FALCON', req: 0 },
-        { spriteId: 'ljs', name: 'LONG JOHN SILVER', req: 1 },
         { spriteId: 'arya', name: 'ARYA', req: 1 },
         { spriteId: 'dutch', name: 'DUTCH', req: 1 },
-        { spriteId: 'mclovin', name: 'MCLOVIN', req: 2 },
-        { spriteId: 'britney', name: 'BRITNEY', req: 3 },
-        { spriteId: 'mfdoom', name: 'MF DOOM', req: 4 }
+        { spriteId: 'ljs', name: 'LONG JOHN SILVER', req: 2 },
+        { spriteId: 'mclovin', name: 'MCLOVIN', req: 3 },
+        { spriteId: 'britney', name: 'BRITNEY', req: 4 },
+        { spriteId: 'mfdoom', name: 'MF DOOM', req: 5 }
     ];
 
     const enemiesList = [
@@ -323,10 +323,10 @@
         { spriteId: 'beeman', name: 'BEEMAN', req: 0 },
         { spriteId: 'orologioman', name: 'CHRONOMUTANT', req: 0 },
         { spriteId: 'radioman', name: 'FREQ-GHOUL', req: 0 },
-        { spriteId: 'murena', name: 'MURENA', req: 1 },
-        { spriteId: 'pigeon', name: 'PIGEON', req: 2 },
-        { spriteId: 'ornitorincoman', name: 'ORNITORINCO', req: 3 },
-        { spriteId: 'doom', name: 'DOOM', req: 4 }
+        { spriteId: 'murena', name: 'MURENA', req: 2 },
+        { spriteId: 'pigeon', name: 'PIGEON', req: 3 },
+        { spriteId: 'ornitorincoman', name: 'ORNITORINCO', req: 4 },
+        { spriteId: 'doom', name: 'DOOM', req: 5 }
     ];
 
     const stages = [
@@ -736,9 +736,10 @@
                             if (totalWins === 1) {
                                 pendingSpecialUnlock = true; 
                             }
-                            else if (totalWins === 2) pendingUnlockMessage = "HERO: MCLOVIN\nENEMY: PIGEON";
-                            else if (totalWins === 3) pendingUnlockMessage = "HERO: BRITNEY\nENEMY: ORNITORINCO";
-                            else if (totalWins === 4) pendingUnlockMessage = "HERO: MF DOOM\nENEMY: DOOM";
+                            else if (totalWins === 2) pendingUnlockMessage = "HERO: LONG JOHN SILVER\nENEMY: MURENA";
+                            else if (totalWins === 3) pendingUnlockMessage = "HERO: MCLOVIN\nENEMY: PIGEON";
+                            else if (totalWins === 4) pendingUnlockMessage = "HERO: BRITNEY\nENEMY: ORNITORINCO";
+                            else if (totalWins === 5) pendingUnlockMessage = "HERO: MF DOOM\nENEMY: DOOM";
                         }
 
                         document.getElementById('end-screen').style.visibility = 'visible';
