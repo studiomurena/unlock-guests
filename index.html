@@ -179,11 +179,18 @@
         <button class="win-btn" style="font-size: 14px; padding: 10px;" onclick="handleEndScreen()">CONTINUE</button>
     </div>
 
-    <!-- Schermata di Sblocco -->
+    <!-- Schermata di Sblocco Standard -->
     <div id="unlock-screen" class="overlay">
         <h1>NEW CHALLENGER<br>UNLOCKED!</h1>
         <p id="unlock-text" style="color: white; margin-bottom: 30px; font-size: 14px; text-shadow: 1px 1px #000;"></p>
         <button class="win-btn" style="font-size: 14px; padding: 10px;" onclick="resetToMenu()">AWESOME!</button>
+    </div>
+
+    <!-- NUOVA Schermata di Sblocco Speciale (Arya & Dutch) -->
+    <div id="special-unlock-screen" class="overlay" style="background: rgba(0,0,0,0.5); justify-content: flex-start; padding-top: 40px;">
+        <h1 style="color: #00ffff; text-shadow: 3px 3px #000;">NEW HEROES!</h1>
+        <p style="color: white; font-size: 12px; text-shadow: 2px 2px #000; margin-bottom: 20px; line-height: 1.6;">ARYA & DUTCH HAVE JOINED THE FIGHT!<br>(L.J.S. & Murena unlocked too)</p>
+        <button class="win-btn" style="font-size: 16px; padding: 15px; margin-top: auto; margin-bottom: 40px;" onclick="resetToMenu()">LET'S GO!</button>
     </div>
 
     <canvas id="gameCanvas" width="800" height="450"></canvas>
@@ -214,16 +221,16 @@
         return imageCache[src];
     }
 
-    // AUDIO DI SOTTOFONDO: Volumi Abbassati
+    // AUDIO DI SOTTOFONDO
     const menuMusic = new Audio('assets/Jazzhighlanders_8bit_F.wav');
     menuMusic.loop = true; 
-    menuMusic.volume = 0.3; // Musica Menu Più Bassa
+    menuMusic.volume = 0.3;
 
     const stageMusic = new Audio();
     stageMusic.loop = true; 
-    stageMusic.volume = 0.2; // Musica Stage Bassa, per dare spazio ai Sample!
+    stageMusic.volume = 0.2;
 
-    // SUONI SFX DI GIOCO: Volumi Alti
+    // SUONI SFX
     const sfx = {
         r1: new Audio('assets/round-one-fight.mp3'),
         r2: new Audio('assets/round-two-fight.mp3'),
@@ -234,10 +241,8 @@
 
     let audioUnlocked = false;
 
-    // Sblocco Audio Silenzioso e pulito
     function unlockAudio() {
         if (audioUnlocked) return;
-        
         if (mode === "SELECT") {
             menuMusic.play().catch(e => console.log("Init menu err", e));
         }
@@ -250,12 +255,11 @@
 
     function playSfx(audioObj) {
         if (!audioObj) return;
-        audioObj.volume = 1.0; // Volume sempre al massimo per gli SFX
+        audioObj.volume = 1.0;
         audioObj.currentTime = 0;
         audioObj.play().catch(e => console.log("Audio SFX blocked:", e));
     }
 
-    // LA LISTA ESATTA DEGLI MP3 SU GITHUB PER IL CHECK
     const validCharSfxList = [
         'baba-attack.mp3', 'baba-hurt.mp3', 'baba-loose.mp3', 'baba-win.mp3',
         'beeman-attack.mp3', 'beeman-hurt.mp3', 'beeman-loose.mp3',
@@ -276,38 +280,28 @@
         'pigeon-attack.mp3', 'pigeon-hurt.mp3', 'pigeon-loose.mp3', 'pigeon-win.mp3'
     ];
 
-    // FUNZIONE BLINDATA PER I VERSI DEI PERSONAGGI
     function playCharSfx(spriteId, action) {
         let audioName = `${spriteId}-${action}`;
-
-        // FIX nomi differenti tra spriteId e nomi dei file
         if (spriteId === 'orologioman') audioName = `chronomutant-${action}`;
         if (spriteId === 'radioman') {
-            if (action === 'hurt') audioName = 'freq-ghoul--hurt'; // FIX doppio trattino
+            if (action === 'hurt') audioName = 'freq-ghoul--hurt';
             else audioName = `freq-ghoul-${action}`;
         }
-        
-        // Eccezioni speciali
-        if (spriteId === 'britney' && (action === 'select' || action === 'win')) {
-            audioName = 'britney-bitch';
-        }
-        if (spriteId === 'doom' && (action === 'select' || action === 'win')) {
-            audioName = 'doom-not-surrender';
-        }
+        if (spriteId === 'britney' && (action === 'select' || action === 'win')) audioName = 'britney-bitch';
+        if (spriteId === 'doom' && (action === 'select' || action === 'win')) audioName = 'doom-not-surrender';
 
         let fileName = `${audioName}.mp3`;
-        
-        // Controlla se il file esiste davvero per non causare errori 404 in console
         if (validCharSfxList.includes(fileName)) {
             let audio = new Audio(`assets/${fileName}`);
-            audio.volume = 1.0; // Effetti al MASSIMO
-            audio.play().catch(e => console.log(`Audio bloccato dal browser: assets/${fileName}`));
+            audio.volume = 1.0;
+            audio.play().catch(e => console.log(`Audio bloccato: assets/${fileName}`));
         }
     }
 
-    // SISTEMA DI SALVATAGGIO PROGRESSI DI SESSIONE
+    // SALVATAGGIO PROGRESSI
     let totalWins = parseInt(sessionStorage.getItem('murenaWins') || '0');
     let pendingUnlockMessage = ""; 
+    let pendingSpecialUnlock = false; // Flag per lo showcase di Arya & Dutch
 
     // ASSETS & PROGRESSIONE
     const heroes = [
@@ -317,6 +311,8 @@
         { spriteId: 'mauri2', name: 'MAURI', req: 0 },
         { spriteId: 'falcon2', name: 'FALCON', req: 0 },
         { spriteId: 'ljs', name: 'LONG JOHN SILVER', req: 1 },
+        { spriteId: 'arya', name: 'ARYA', req: 1 },
+        { spriteId: 'dutch', name: 'DUTCH', req: 1 },
         { spriteId: 'mclovin', name: 'MCLOVIN', req: 2 },
         { spriteId: 'britney', name: 'BRITNEY', req: 3 },
         { spriteId: 'mfdoom', name: 'MF DOOM', req: 4 }
@@ -333,7 +329,6 @@
         { spriteId: 'doom', name: 'DOOM', req: 4 }
     ];
 
-    // TUTTI I BACKGROUND
     const stages = [
         { name: 'RUSTWATER', bg: 'assets/metro.gif', music: 'assets/rustwater.mp3' },
         { name: 'COLLAPSE POINT', bg: 'assets/buconero.gif', music: 'assets/collapsepoint.mp3' },
@@ -353,7 +348,6 @@
         { name: 'FIESTA', bg: 'assets/mexico.webp', music: 'assets/fiesta.mp3' }
     ];
 
-    // VARIABILI GLOBALI E FISICA SCALATA
     let selectState = 0; 
     let mode = "SELECT"; 
     let p1Char = null; let cpuChar = null; let currentStage = null;
@@ -366,6 +360,11 @@
 
     let p1 = { x: 80, y: GROUND_Y, hp: 100, state: 'idle', frame: 0, dir: 1, vy: 0, timer: 0, deadTimer: 0 };
     let cpu = { x: 430, y: GROUND_Y, hp: 100, state: 'idle', frame: 0, dir: -1, vy: 0, timer: 0, deadTimer: 0 };
+
+    // Variabili per lo showcase di Arya e Dutch
+    let showcaseTimer = 0;
+    let showcaseState = 'idle';
+    let showcaseFighters = [];
 
     // INPUT
     const keys = { l: 0, r: 0, j: 0, a: 0, d: 0 };
@@ -518,12 +517,38 @@
         }
     }
 
+    function startSpecialUnlock() {
+        mode = "UNLOCK_SHOWCASE";
+        document.getElementById('controls').style.visibility = 'hidden';
+        document.getElementById('btn-pause').style.display = 'none';
+        
+        // Assegna uno sfondo random per lo showcase
+        let randStage = stages[Math.floor(Math.random() * stages.length)];
+        canvas.style.backgroundImage = `url('${randStage.bg}')`;
+        canvas.style.backgroundSize = 'cover';
+        canvas.style.backgroundPosition = 'center';
+
+        // Precarica gli sprite
+        getImage('assets/arya-idle.png'); getImage('assets/arya-attack.png');
+        getImage('assets/dutch-idle.png'); getImage('assets/dutch-attack.png');
+
+        showcaseTimer = 0;
+        showcaseState = 'idle';
+        showcaseFighters = [
+            { x: 120, y: GROUND_Y, state: 'idle', frame: 0, dir: 1, deadTimer: 0 },
+            { x: 420, y: GROUND_Y, state: 'idle', frame: 0, dir: -1, deadTimer: 0 }
+        ];
+
+        document.getElementById('special-unlock-screen').style.visibility = 'visible';
+    }
+
     function resetToMenu() {
         stageMusic.pause();
         stageMusic.currentTime = 0;
 
         document.getElementById('end-screen').style.visibility = 'hidden';
         document.getElementById('unlock-screen').style.visibility = 'hidden';
+        document.getElementById('special-unlock-screen').style.visibility = 'hidden';
         document.getElementById('pause-screen').style.visibility = 'hidden';
         document.getElementById('controls').style.visibility = 'hidden';
         document.getElementById('btn-pause').style.display = 'none';
@@ -536,7 +561,12 @@
 
     function handleEndScreen() {
         document.getElementById('end-screen').style.visibility = 'hidden';
-        if (pendingUnlockMessage !== "") {
+        
+        if (pendingSpecialUnlock) {
+            startSpecialUnlock();
+            pendingSpecialUnlock = false;
+        }
+        else if (pendingUnlockMessage !== "") {
             document.getElementById('unlock-text').innerText = pendingUnlockMessage;
             document.getElementById('unlock-screen').style.visibility = 'visible';
             pendingUnlockMessage = ""; 
@@ -703,7 +733,9 @@
                             totalWins++;
                             sessionStorage.setItem('murenaWins', totalWins);
                             
-                            if (totalWins === 1) pendingUnlockMessage = "HERO: LONG JOHN SILVER\nENEMY: MURENA";
+                            if (totalWins === 1) {
+                                pendingSpecialUnlock = true; 
+                            }
                             else if (totalWins === 2) pendingUnlockMessage = "HERO: MCLOVIN\nENEMY: PIGEON";
                             else if (totalWins === 3) pendingUnlockMessage = "HERO: BRITNEY\nENEMY: ORNITORINCO";
                             else if (totalWins === 4) pendingUnlockMessage = "HERO: MF DOOM\nENEMY: DOOM";
@@ -720,6 +752,21 @@
     }
 
     function update() {
+        if (mode === "UNLOCK_SHOWCASE") {
+            showcaseTimer++;
+            // 180 frame = 3 secondi a 60 fps
+            if (showcaseTimer % 180 === 0) {
+                showcaseState = (showcaseState === 'idle') ? 'attack' : 'idle';
+                showcaseFighters[0].state = showcaseState;
+                showcaseFighters[1].state = showcaseState;
+                
+                // Resetta i frame per far partire l'animazione attack da zero
+                showcaseFighters[0].frame = 0;
+                showcaseFighters[1].frame = 0;
+            }
+            return;
+        }
+
         if (mode !== "FIGHT" && mode !== "ROUND_OVER") return;
 
         if (mode === "FIGHT") {
@@ -740,6 +787,19 @@
 
     function draw() {
         ctx.clearRect(0, 0, 800, 450);
+
+        if (mode === "UNLOCK_SHOWCASE") {
+            drawFighter(showcaseFighters[0], 'arya');
+            drawFighter(showcaseFighters[1], 'dutch');
+            
+            // Etichette dei nomi fluttuanti
+            ctx.fillStyle = "#fff"; ctx.font = "16px 'Press Start 2P'";
+            ctx.fillText("ARYA", showcaseFighters[0].x + 75, showcaseFighters[0].y - 200);
+            ctx.fillText("DUTCH", showcaseFighters[1].x + 65, showcaseFighters[1].y - 200);
+            
+            requestAnimationFrame(draw);
+            return;
+        }
 
         if (mode !== "SELECT" && currentStage) {
             ctx.fillStyle = "#444"; ctx.fillRect(45, 15, 310, 20); ctx.fillRect(445, 15, 310, 20);
