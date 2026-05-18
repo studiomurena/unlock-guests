@@ -290,7 +290,7 @@
         }
     }
 
-    // LISTA ASSETS GIA' COMPRENSIVA DI STATO LOCKED FISSO (Aggiornato dutchnazari)
+    // LISTA ASSETS GIA' COMPRENSIVA DI STATO LOCKED FISSO
     const heroes = [
         { spriteId: 'carma2', name: 'CARMA', isLocked: false },
         { spriteId: 'ferraz2', name: 'FERRAZ', isLocked: false },
@@ -340,6 +340,9 @@
     let p1Char = null; let cpuChar = null; let currentStage = null;
     let hoverChar = heroes[0];
     let currentStageHover = stages[0];
+
+    // Variabile globale per tenere traccia del GUEST
+    let guestPendingChar = null;
 
     let matchTimer = 99; let framesCounter = 0;
     let currentRound = 1; let p1Wins = 0; let cpuWins = 0;
@@ -394,7 +397,9 @@
     }
 
     function triggerGuestUnlock(c) {
-        c.isLocked = false; 
+        c.isLocked = false; // Sblocca permanentemente per la sessione
+        guestPendingChar = c; 
+        
         if (selectState === 0) p1Char = c;
         if (selectState === 1) cpuChar = c;
         
@@ -513,6 +518,7 @@
 
         const anims = ['idle', 'run', 'attack', 'dodge', 'hurt'];
         anims.forEach(st => {
+            // Per arya e dutchnazari cercherà pre-caricare, ma non fa nulla se non esistono, ed è sicuro.
             getImage(`assets/${p1Char.spriteId}-${st}.png`);
             getImage(`assets/${cpuChar.spriteId}-${st}.png`);
         });
@@ -579,6 +585,11 @@
 
         let drawState = f.state;
         if (drawState === 'dodge' || drawState === 'dead') drawState = 'idle';
+
+        // FORZATURA PER I PERSONAGGI SOLO IDLE (non causeranno più il crash dell'immagine)
+        if (spriteId === 'arya' || spriteId === 'dutchnazari') {
+            drawState = 'idle';
+        }
 
         let finalImg = getImage(`assets/${spriteId}-${drawState}.png`);
         
@@ -754,6 +765,33 @@
     }
 
     function draw() {
+        // Disegna direttamente il GUEST SBLOCCATO
+        if (mode === "GUEST_UNLOCK") {
+            ctx.clearRect(0, 0, 800, 450);
+            
+            if (guestPendingChar) {
+                let finalImg = getImage(`assets/${guestPendingChar.spriteId}-idle.png`);
+                
+                if (finalImg.complete && finalImg.naturalWidth > 0) {
+                    const frameW = finalImg.width / 5; const frameH = finalImg.height / 5;
+                    const frame = Math.floor(Date.now() / 50) % 25;
+                    const sx = (frame % 5) * frameW; const sy = Math.floor(frame / 5) * frameH;
+                    
+                    ctx.save();
+                    let scale = 2.4; 
+                    let drawW = SPRITE_SIZE * scale;
+                    let drawH = SPRITE_SIZE * scale;
+                    
+                    // Centrato sullo schermo, y spostato per inquadrare la testa e il busto
+                    ctx.translate(400, -40);
+                    ctx.drawImage(finalImg, sx, sy, frameW, frameH, -drawW/2, 0, drawW, drawH);
+                    ctx.restore();
+                }
+            }
+            requestAnimationFrame(draw);
+            return; // Salta tutto il resto
+        }
+
         ctx.clearRect(0, 0, 800, 450);
 
         if (mode === "SELECT") {
@@ -788,7 +826,7 @@
                 else {
                     // Imposta l'animazione corretta
                     let drawState = 'idle';
-                    // Dutch Nazari e Arya rimangono rigorosamente in idle
+                    // Dutch Nazari e Arya rimangono rigorosamente in idle anche in preview
                     if (hoverChar.spriteId !== 'arya' && hoverChar.spriteId !== 'dutchnazari') {
                         drawState = Math.floor(Date.now() / 1500) % 2 === 0 ? 'idle' : 'attack';
                     }
@@ -834,7 +872,7 @@
                 }
             }
         } 
-        else if (mode !== "SELECT" && mode !== "GUEST_UNLOCK" && currentStage) {
+        else if (mode !== "SELECT" && currentStage) {
             // UI Barra HP
             ctx.fillStyle = "#444"; ctx.fillRect(45, 15, 310, 20); ctx.fillRect(445, 15, 310, 20);
             ctx.fillStyle = "red"; ctx.fillRect(50, 17, 300, 16); ctx.fillRect(450, 17, 300, 16);
