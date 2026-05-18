@@ -85,7 +85,7 @@
             color: #fff; font-size: 7px; padding: 4px 0; text-align: center;
         }
 
-        /* OVERLAYS */
+        /* OVERLAYS E ANIMAZIONI TESTO */
         .overlay {
             position: absolute; inset: 0; background: rgba(0, 0, 0, 0.85);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -97,6 +97,21 @@
             position: absolute; top: 40%; width: 100%; text-align: center;
             font-size: 24px; color: #fff; text-shadow: 2px 2px #f00; z-index: 5;
             visibility: hidden; font-weight: bold; pointer-events: none;
+        }
+
+        /* Effetto Glitch per Sblocco Personaggio */
+        @keyframes unlockAnim {
+            0% { opacity: 1; text-shadow: 4px 0 red, -4px 0 blue; transform: scale(1) skewX(-15deg); }
+            5% { opacity: 1; text-shadow: -4px 0 red, 4px 0 blue; transform: scale(1.1) skewX(15deg); }
+            10% { opacity: 1; text-shadow: 4px 0 lime, -4px 0 magenta; transform: scale(0.9) skewX(-10deg); }
+            15% { opacity: 1; text-shadow: -4px 0 yellow, 4px 0 cyan; transform: scale(1.05) skewX(5deg); }
+            20% { opacity: 1; text-shadow: 2px 2px #000; transform: scale(1) skewX(0deg); } /* Fine glitch (0.8s) */
+            25% { opacity: 1; }
+            75% { opacity: 1; } /* Rimane leggibile fino a 3s */
+            100% { opacity: 0; } /* Dissolvenza finale */
+        }
+        .unlock-anim {
+            animation: unlockAnim 4s forwards;
         }
 
         /* CONTROLLI MOBILE STILE CABINATO */
@@ -180,8 +195,11 @@
     </div>
 
     <!-- Schermata di Sblocco GUEST -->
-    <div id="guest-unlock-screen" class="overlay" style="background: rgba(0,0,0,0.4); justify-content: flex-start; padding-top: 50px;">
-        <h1 style="color: #ffcc00; text-shadow: 3px 3px #000;">YOU HAVE UNLOCKED GUEST<br><span id="guest-unlock-name" style="color: #00ffff;"></span>!</h1>
+    <div id="guest-unlock-screen" class="overlay" style="background: rgba(0,0,0,0.4); justify-content: flex-start; padding-top: 40px;">
+        <div id="guest-unlock-container" style="opacity: 0;">
+            <h2 style="color: #ffcc00; text-shadow: 2px 2px #000; font-size: 14px; margin-bottom: 10px;">YOU HAVE UNLOCKED GUEST:</h2>
+            <h1 id="guest-unlock-name" style="color: #00ffff; text-shadow: 3px 3px #000; font-size: 20px;"></h1>
+        </div>
         <button class="win-btn" style="font-size: 16px; padding: 15px; margin-top: auto; margin-bottom: 50px;" onclick="finishGuestUnlock()">AWESOME!</button>
     </div>
 
@@ -290,7 +308,7 @@
         }
     }
 
-    // LISTA ASSETS GIA' COMPRENSIVA DI STATO LOCKED FISSO
+    // LISTA ASSETS (Tutti gli sbloccati rimarranno sbloccati nella sessione finché non ricarichi la pagina)
     const heroes = [
         { spriteId: 'carma2', name: 'CARMA', isLocked: false },
         { spriteId: 'ferraz2', name: 'FERRAZ', isLocked: false },
@@ -341,7 +359,6 @@
     let hoverChar = heroes[0];
     let currentStageHover = stages[0];
 
-    // Variabile globale per tenere traccia del GUEST
     let guestPendingChar = null;
 
     let matchTimer = 99; let framesCounter = 0;
@@ -397,11 +414,8 @@
     }
 
     function triggerGuestUnlock(c) {
-        c.isLocked = false; // Sblocca permanentemente per la sessione
+        c.isLocked = false; // Rimuove per sempre lo stato di blocco
         guestPendingChar = c; 
-        
-        if (selectState === 0) p1Char = c;
-        if (selectState === 1) cpuChar = c;
         
         mode = "GUEST_UNLOCK";
         document.getElementById('selection-screen').style.display = 'none';
@@ -411,21 +425,29 @@
         canvas.style.backgroundSize = 'cover';
         canvas.style.backgroundPosition = 'center';
 
-        document.getElementById('guest-unlock-name').innerText = c.name;
+        document.getElementById('guest-unlock-name').innerText = `"${c.name}"!`;
+        
+        // Faccio ripartire l'animazione Glitch resettando la classe
+        const unlockContainer = document.getElementById('guest-unlock-container');
+        unlockContainer.classList.remove('unlock-anim');
+        void unlockContainer.offsetWidth; // trucchetto per triggerare il reflow del DOM
+        unlockContainer.classList.add('unlock-anim');
+
         document.getElementById('guest-unlock-screen').style.visibility = 'visible';
     }
 
     function finishGuestUnlock() {
         document.getElementById('guest-unlock-screen').style.visibility = 'hidden';
-        if (selectState === 0) {
-            selectState = 1;
-            mode = "SELECT";
-            hoverChar = enemiesList[0];
-            document.getElementById('selection-screen').style.display = 'flex';
-            loadSelectionScreen();
-        } else if (selectState === 1) {
-            startMatch(); 
-        }
+        
+        // Riporta brutalmente al menu di selezione eroe principale (Così puoi vederlo sbloccato!)
+        selectState = 0;
+        mode = "SELECT";
+        p1Char = null; 
+        cpuChar = null;
+        hoverChar = heroes[0]; // Reset dell'hover al primo eroe
+        
+        document.getElementById('selection-screen').style.display = 'flex';
+        loadSelectionScreen(); // Questo ricaricherà la griglia mostrando il nuovo sbloccato
     }
 
     function loadSelectionScreen() {
@@ -518,7 +540,6 @@
 
         const anims = ['idle', 'run', 'attack', 'dodge', 'hurt'];
         anims.forEach(st => {
-            // Per arya e dutchnazari cercherà pre-caricare, ma non fa nulla se non esistono, ed è sicuro.
             getImage(`assets/${p1Char.spriteId}-${st}.png`);
             getImage(`assets/${cpuChar.spriteId}-${st}.png`);
         });
@@ -586,7 +607,6 @@
         let drawState = f.state;
         if (drawState === 'dodge' || drawState === 'dead') drawState = 'idle';
 
-        // FORZATURA PER I PERSONAGGI SOLO IDLE (non causeranno più il crash dell'immagine)
         if (spriteId === 'arya' || spriteId === 'dutchnazari') {
             drawState = 'idle';
         }
@@ -765,7 +785,6 @@
     }
 
     function draw() {
-        // Disegna direttamente il GUEST SBLOCCATO
         if (mode === "GUEST_UNLOCK") {
             ctx.clearRect(0, 0, 800, 450);
             
@@ -782,20 +801,18 @@
                     let drawW = SPRITE_SIZE * scale;
                     let drawH = SPRITE_SIZE * scale;
                     
-                    // Centrato sullo schermo, y spostato per inquadrare la testa e il busto
                     ctx.translate(400, -40);
                     ctx.drawImage(finalImg, sx, sy, frameW, frameH, -drawW/2, 0, drawW, drawH);
                     ctx.restore();
                 }
             }
             requestAnimationFrame(draw);
-            return; // Salta tutto il resto
+            return; 
         }
 
         ctx.clearRect(0, 0, 800, 450);
 
         if (mode === "SELECT") {
-            // Sfondo selezione
             let bgSrc = selectState === 0 ? 'assets/bkg1.png' : (selectState === 1 ? 'assets/bkg2.png' : 'assets/bkg3.png');
             if (selectState === 2 && currentStageHover) bgSrc = currentStageHover.bg;
             
@@ -807,10 +824,7 @@
                 ctx.fillRect(0,0,800,450);
             }
 
-            // Preview del personaggio selezionato sul lato sinistro o destro
             if ((selectState === 0 || selectState === 1) && hoverChar) {
-                
-                // Disegna Anonimo se è bloccato (NO SPOILER!)
                 if (hoverChar.isLocked) {
                     let anonimoImg = getImage('assets/anonimo.png');
                     if (anonimoImg.complete && anonimoImg.naturalWidth > 0) {
@@ -824,16 +838,13 @@
                     }
                 } 
                 else {
-                    // Imposta l'animazione corretta
                     let drawState = 'idle';
-                    // Dutch Nazari e Arya rimangono rigorosamente in idle anche in preview
                     if (hoverChar.spriteId !== 'arya' && hoverChar.spriteId !== 'dutchnazari') {
                         drawState = Math.floor(Date.now() / 1500) % 2 === 0 ? 'idle' : 'attack';
                     }
                     
                     let finalImg = getImage(`assets/${hoverChar.spriteId}-${drawState}.png`);
                     
-                    // Fallback di sicurezza in caso non carichi l'attack
                     if (!finalImg.complete || finalImg.naturalWidth === 0) {
                         finalImg = getImage(`assets/${hoverChar.spriteId}-idle.png`);
                     }
@@ -844,28 +855,22 @@
                         const sx = (frame % 5) * frameW; const sy = Math.floor(frame / 5) * frameH;
                         
                         ctx.save();
-                        
-                        // Grandezza massiccia per la preview
                         let scale = 2.4; 
                         let drawW = SPRITE_SIZE * scale;
                         let drawH = SPRITE_SIZE * scale;
                         
-                        // Posizionamento: Eroi a sx (200), Nemici a dx (600)
                         let xAnchor = selectState === 0 ? 200 : 600;
-                        // Ancoraggio asse Y molto in alto (-40) così la testa sta perfettamente nello schermo e i piedi svaniscono in basso
                         let yAnchor = -40;
                         
                         ctx.translate(xAnchor, yAnchor);
                         
                         if (selectState === 1) { 
-                            ctx.scale(-1, 1); // Ruota il nemico per guardare verso l'eroe
+                            ctx.scale(-1, 1);
                         }
                         
-                        // Centrato sull'ancora X
                         ctx.drawImage(finalImg, sx, sy, frameW, frameH, -drawW/2, 0, drawW, drawH);
                         ctx.restore();
                         
-                        // Disegna il nome e lo stato
                         ctx.fillStyle = "#fff"; ctx.font = "16px 'Press Start 2P'"; ctx.textAlign = "center";
                         ctx.fillText(hoverChar.name, xAnchor, 420);
                     }
@@ -873,7 +878,6 @@
             }
         } 
         else if (mode !== "SELECT" && currentStage) {
-            // UI Barra HP
             ctx.fillStyle = "#444"; ctx.fillRect(45, 15, 310, 20); ctx.fillRect(445, 15, 310, 20);
             ctx.fillStyle = "red"; ctx.fillRect(50, 17, 300, 16); ctx.fillRect(450, 17, 300, 16);
             
@@ -902,7 +906,6 @@
         requestAnimationFrame(draw);
     }
 
-    // Aggiungi anonimo e unlocked alle immagini precacheate per evitare rallentamenti
     getImage('assets/anonimo.png');
     getImage('assets/unlocked.gif');
 
