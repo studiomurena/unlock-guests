@@ -105,10 +105,10 @@
             5% { opacity: 1; text-shadow: -4px 0 red, 4px 0 blue; transform: scale(1.1) skewX(15deg); }
             10% { opacity: 1; text-shadow: 4px 0 lime, -4px 0 magenta; transform: scale(0.9) skewX(-10deg); }
             15% { opacity: 1; text-shadow: -4px 0 yellow, 4px 0 cyan; transform: scale(1.05) skewX(5deg); }
-            20% { opacity: 1; text-shadow: 2px 2px #000; transform: scale(1) skewX(0deg); } /* Fine glitch (0.8s) */
+            20% { opacity: 1; text-shadow: 2px 2px #000; transform: scale(1) skewX(0deg); }
             25% { opacity: 1; }
-            75% { opacity: 1; } /* Rimane leggibile fino a 3s */
-            100% { opacity: 0; } /* Dissolvenza finale */
+            75% { opacity: 1; } 
+            100% { opacity: 0; } 
         }
         .unlock-anim {
             animation: unlockAnim 4s forwards;
@@ -174,7 +174,6 @@
         <h2 id="char-name" style="margin-top: 15px; margin-bottom: 5px; color: #ffcc00; text-shadow: 2px 2px #000;">SELECT HERO</h2>
         <div style="font-size: 8px; color: #fff; background: rgba(0,0,0,0.5); padding: 5px;">DOUBLE TAP TO CONFIRM/UNLOCK</div>
         
-        <!-- Spazio flessibile per lasciare il canvas visibile -->
         <div style="flex: 1; width: 100%;"></div> 
         
         <div id="grid" class="scrolling-grid"></div>
@@ -188,7 +187,6 @@
         <button class="win-btn" style="font-size: 14px; padding: 10px; margin-top: 10px;" onclick="resetToMenu()">QUIT TO MENU</button>
     </div>
 
-    <!-- Schermata Fine Partita -->
     <div id="end-screen" class="overlay">
         <h1 id="end-title">YOU WIN!</h1>
         <button class="win-btn" style="font-size: 14px; padding: 10px;" onclick="resetToMenu()">CONTINUE</button>
@@ -231,7 +229,22 @@
         return imageCache[src];
     }
 
-    // AUDIO DI SOTTOFONDO
+    // MAPPER INTELLIGENTE NOMI FILE SPRITES
+    function getSpritePath(spriteId, state) {
+        let fileState = state;
+        const walkChars = ['Daykoda', 'RiccardoSala', 'SilentBob', 'SickBudd', 'EnricoGabrielli', 'JackTheSmoker', 'FreshMula', 'CarloCorallo', 'Ghemon', 'WilliePeyote', 'Mezzosangue'];
+        const punchChars = ['Daykoda', 'SilentBob', 'SickBudd', 'JackTheSmoker', 'Ghemon', 'WilliePeyote', 'Mezzosangue'];
+        const kickChars = ['FreshMula', 'CarloCorallo'];
+        
+        if (state === 'run' && walkChars.includes(spriteId)) fileState = 'walk';
+        if (state === 'attack') {
+            if (punchChars.includes(spriteId)) fileState = 'punch';
+            if (kickChars.includes(spriteId)) fileState = 'kick';
+        }
+
+        return `assets/${spriteId}-${fileState}.png`;
+    }
+
     const menuMusic = new Audio('assets/Jazzhighlanders_8bit_F.wav');
     menuMusic.loop = true; 
     menuMusic.volume = 0.3;
@@ -240,7 +253,6 @@
     stageMusic.loop = true; 
     stageMusic.volume = 0.2;
 
-    // SUONI SFX
     const sfx = {
         r1: new Audio('assets/round-one-fight.mp3'),
         r2: new Audio('assets/round-two-fight.mp3'),
@@ -254,7 +266,7 @@
     function unlockAudio() {
         if (audioUnlocked) return;
         if (mode === "SELECT") {
-            menuMusic.play().catch(e => console.log("Init menu err", e));
+            menuMusic.play().catch(e => {});
         }
         audioUnlocked = true;
     }
@@ -267,7 +279,7 @@
         if (!audioObj) return;
         audioObj.volume = 1.0;
         audioObj.currentTime = 0;
-        audioObj.play().catch(e => console.log("Audio SFX blocked:", e));
+        audioObj.play().catch(e => {});
     }
 
     const validCharSfxList = [
@@ -304,23 +316,30 @@
         if (validCharSfxList.includes(fileName)) {
             let audio = new Audio(`assets/${fileName}`);
             audio.volume = 1.0;
-            audio.play().catch(e => console.log(`Audio bloccato: assets/${fileName}`));
+            audio.play().catch(e => {});
         }
     }
 
-    // LISTA ASSETS (Tutti gli sbloccati rimarranno sbloccati nella sessione finché non ricarichi la pagina)
+    // LISTA ASSETS EROI DEFINITIVA
     const heroes = [
         { spriteId: 'carma2', name: 'CARMA', isLocked: false },
         { spriteId: 'ferraz2', name: 'FERRAZ', isLocked: false },
         { spriteId: 'nan2', name: 'NAN', isLocked: false },
         { spriteId: 'mauri2', name: 'MAURI', isLocked: false },
         { spriteId: 'falcon2', name: 'FALCON', isLocked: false },
-        { spriteId: 'arya', name: 'ARYA', isLocked: true },
-        { spriteId: 'dutchnazari', name: 'DUTCH NAZARI', isLocked: true },
-        { spriteId: 'ljs', name: 'LONG JOHN SILVER', isLocked: true },
-        { spriteId: 'mclovin', name: 'MCLOVIN', isLocked: true },
-        { spriteId: 'britney', name: 'BRITNEY', isLocked: true },
-        { spriteId: 'mfdoom', name: 'MF DOOM', isLocked: true }
+        { spriteId: 'Daykoda', name: 'DAYKODA', isLocked: true },
+        { spriteId: 'RiccardoSala', name: 'RICCARDO SALA', isLocked: true },
+        { spriteId: 'SilentBob', name: 'SILENT BOB', isLocked: true },
+        { spriteId: 'SickBudd', name: 'SICK BUDD', isLocked: true },
+        { spriteId: 'Arya', name: 'ARYA', isLocked: true },
+        { spriteId: 'Dutch', name: 'DUTCH NAZARI', isLocked: true },
+        { spriteId: 'EnricoGabrielli', name: 'ENRICO GABRIELLI', isLocked: true },
+        { spriteId: 'JackTheSmoker', name: 'JACK THE SMOKER', isLocked: true },
+        { spriteId: 'FreshMula', name: 'FRESH MULA', isLocked: true },
+        { spriteId: 'CarloCorallo', name: 'CARLO CORALLO', isLocked: true },
+        { spriteId: 'Ghemon', name: 'GHEMON', isLocked: true },
+        { spriteId: 'WilliePeyote', name: 'WILLIE PEYOTE', isLocked: true },
+        { spriteId: 'Mezzosangue', name: 'MEZZOSANGUE', isLocked: true }
     ];
 
     const enemiesList = [
@@ -370,7 +389,6 @@
     let p1 = { x: 80, y: GROUND_Y, hp: 100, state: 'idle', frame: 0, dir: 1, vy: 0, timer: 0, deadTimer: 0 };
     let cpu = { x: 430, y: GROUND_Y, hp: 100, state: 'idle', frame: 0, dir: -1, vy: 0, timer: 0, deadTimer: 0 };
 
-    // INPUT
     const keys = { l: 0, r: 0, j: 0, a: 0, d: 0 };
     const setup = (id, k) => {
         const b = document.getElementById(id);
@@ -414,23 +432,21 @@
     }
 
     function triggerGuestUnlock(c) {
-        c.isLocked = false; // Rimuove per sempre lo stato di blocco
+        c.isLocked = false; 
         guestPendingChar = c; 
         
         mode = "GUEST_UNLOCK";
         document.getElementById('selection-screen').style.display = 'none';
         
-        // Sfondo fisso per lo sblocco
         canvas.style.backgroundImage = `url('assets/unlocked.gif')`;
         canvas.style.backgroundSize = 'cover';
         canvas.style.backgroundPosition = 'center';
 
         document.getElementById('guest-unlock-name').innerText = `"${c.name}"!`;
         
-        // Faccio ripartire l'animazione Glitch resettando la classe
         const unlockContainer = document.getElementById('guest-unlock-container');
         unlockContainer.classList.remove('unlock-anim');
-        void unlockContainer.offsetWidth; // trucchetto per triggerare il reflow del DOM
+        void unlockContainer.offsetWidth; 
         unlockContainer.classList.add('unlock-anim');
 
         document.getElementById('guest-unlock-screen').style.visibility = 'visible';
@@ -439,15 +455,14 @@
     function finishGuestUnlock() {
         document.getElementById('guest-unlock-screen').style.visibility = 'hidden';
         
-        // Riporta brutalmente al menu di selezione eroe principale (Così puoi vederlo sbloccato!)
         selectState = 0;
         mode = "SELECT";
         p1Char = null; 
         cpuChar = null;
-        hoverChar = heroes[0]; // Reset dell'hover al primo eroe
+        hoverChar = heroes[0];
         
         document.getElementById('selection-screen').style.display = 'flex';
-        loadSelectionScreen(); // Questo ricaricherà la griglia mostrando il nuovo sbloccato
+        loadSelectionScreen(); 
     }
 
     function loadSelectionScreen() {
@@ -472,7 +487,7 @@
                     d.style.backgroundImage = `url('assets/anonimo.png')`;
                 } else {
                     d.className = 'cell normal-style';
-                    d.style.backgroundImage = `url('assets/${c.spriteId}-idle.png')`;
+                    d.style.backgroundImage = `url('${getSpritePath(c.spriteId, 'idle')}')`;
                 }
 
                 d.onclick = () => { 
@@ -540,8 +555,8 @@
 
         const anims = ['idle', 'run', 'attack', 'dodge', 'hurt'];
         anims.forEach(st => {
-            getImage(`assets/${p1Char.spriteId}-${st}.png`);
-            getImage(`assets/${cpuChar.spriteId}-${st}.png`);
+            getImage(getSpritePath(p1Char.spriteId, st));
+            getImage(getSpritePath(cpuChar.spriteId, st));
         });
 
         p1Wins = 0; cpuWins = 0; currentRound = 1;
@@ -607,15 +622,11 @@
         let drawState = f.state;
         if (drawState === 'dodge' || drawState === 'dead') drawState = 'idle';
 
-        if (spriteId === 'arya' || spriteId === 'dutchnazari') {
-            drawState = 'idle';
-        }
-
-        let finalImg = getImage(`assets/${spriteId}-${drawState}.png`);
+        let finalImg = getImage(getSpritePath(spriteId, drawState));
         
         if (!finalImg.complete || finalImg.naturalWidth === 0) { 
             drawState = 'idle';
-            finalImg = getImage(`assets/${spriteId}-idle.png`);
+            finalImg = getImage(getSpritePath(spriteId, 'idle'));
         }
         
         if (!finalImg.complete || finalImg.naturalWidth === 0) return;
@@ -789,7 +800,7 @@
             ctx.clearRect(0, 0, 800, 450);
             
             if (guestPendingChar) {
-                let finalImg = getImage(`assets/${guestPendingChar.spriteId}-idle.png`);
+                let finalImg = getImage(getSpritePath(guestPendingChar.spriteId, 'idle'));
                 
                 if (finalImg.complete && finalImg.naturalWidth > 0) {
                     const frameW = finalImg.width / 5; const frameH = finalImg.height / 5;
@@ -838,15 +849,11 @@
                     }
                 } 
                 else {
-                    let drawState = 'idle';
-                    if (hoverChar.spriteId !== 'arya' && hoverChar.spriteId !== 'dutchnazari') {
-                        drawState = Math.floor(Date.now() / 1500) % 2 === 0 ? 'idle' : 'attack';
-                    }
-                    
-                    let finalImg = getImage(`assets/${hoverChar.spriteId}-${drawState}.png`);
+                    let drawState = Math.floor(Date.now() / 1500) % 2 === 0 ? 'idle' : 'attack';
+                    let finalImg = getImage(getSpritePath(hoverChar.spriteId, drawState));
                     
                     if (!finalImg.complete || finalImg.naturalWidth === 0) {
-                        finalImg = getImage(`assets/${hoverChar.spriteId}-idle.png`);
+                        finalImg = getImage(getSpritePath(hoverChar.spriteId, 'idle'));
                     }
 
                     if (finalImg.complete && finalImg.naturalWidth > 0) {
