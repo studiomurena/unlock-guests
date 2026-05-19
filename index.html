@@ -67,8 +67,15 @@
         .cell {
             flex: 0 0 60px; height: 60px; background-color: #222; border: 3px solid #808080;
             cursor: pointer; image-rendering: pixelated; transition: transform 0.1s, border-color 0.1s;
+            position: relative; overflow: hidden;
         }
-        .cell:hover { border-color: #fff; transform: scale(1.1); z-index: 2; position: relative;}
+        .cell:hover { border-color: #fff; transform: scale(1.1); z-index: 2; }
+        
+        .cell-name {
+            position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.7);
+            color: #fff; font-size: 6px; padding: 2px 0; text-align: center;
+            line-height: 1.2; word-wrap: break-word; pointer-events: none;
+        }
         
         .cell.normal-style { background-size: 500% 500%; background-position: 0% 0%; }
         .cell.locked-style { background-size: cover; background-position: center; border-color: #880000; }
@@ -482,6 +489,13 @@
             
             list.forEach(c => {
                 const d = document.createElement('div');
+                
+                // Creazione della label col nome sotto al quadrato
+                const labelName = document.createElement('div');
+                labelName.className = 'cell-name';
+                labelName.innerText = c.isLocked ? 'LOCKED' : c.name;
+                d.appendChild(labelName);
+
                 if (c.isLocked) {
                     d.className = 'cell locked-style';
                     d.style.backgroundImage = `url('assets/anonimo.png')`;
@@ -849,7 +863,8 @@
                     }
                 } 
                 else {
-                    let drawState = Math.floor(Date.now() / 1500) % 2 === 0 ? 'idle' : 'attack';
+                    // Qui adesso è bloccato fisso sull'attacco
+                    let drawState = 'attack';
                     let finalImg = getImage(getSpritePath(hoverChar.spriteId, drawState));
                     
                     if (!finalImg.complete || finalImg.naturalWidth === 0) {
