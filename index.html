@@ -34,15 +34,16 @@
         }
         .win-btn:active { border-color: #808080 #fff #fff #808080; background: #a0a0a0; }
 
-        /* MODIFICA 4:5 E OTTIMIZZAZIONE MOBILE */
+        /* FIX BORDATURA E CONTAINER */
         #game-container {
             position: relative; 
-            width: 100vw; 
-            max-width: 600px; /* Limite per desktop */
-            aspect-ratio: 4 / 5; /* Rapporto d'aspetto verticale */
+            width: 100%; /* Sostituito 100vw per evitare lo scroll orizzontale */
+            max-width: 600px;
+            aspect-ratio: 4 / 5; /* Rapporto 4:5 */
             background: #222; overflow: hidden;
             border: 4px solid #c0c0c0;
             margin: 0 auto;
+            box-sizing: border-box; /* Previene il taglio del bordo */
         }
 
         canvas { 
@@ -61,7 +62,7 @@
         /* SCROLLING ORIZZONTALE UNIFICATO */
         .scrolling-grid {
             display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
-            gap: 12px; width: 100%; padding: 15px 10px; box-sizing: border-box;
+            gap: 20px; width: 100%; padding: 20px 10px; box-sizing: border-box;
             background: rgba(0, 0, 0, 0.6); border-top: 3px solid #808080;
             -webkit-overflow-scrolling: touch;
         }
@@ -69,8 +70,9 @@
         .scrolling-grid::-webkit-scrollbar-track { background: #000; }
         .scrolling-grid::-webkit-scrollbar-thumb { background: #ffcc00; border-radius: 4px; }
 
+        /* FIX RADDOPPIO DIMENSIONI CELLE SELEZIONE */
         .cell {
-            flex: 0 0 60px; height: 60px; background-color: #222; border: 3px solid #808080;
+            flex: 0 0 120px; height: 120px; background-color: #222; border: 3px solid #808080;
             cursor: pointer; image-rendering: pixelated; transition: transform 0.1s, border-color 0.1s;
             position: relative; overflow: hidden;
         }
@@ -78,7 +80,7 @@
         
         .cell-name {
             position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.7);
-            color: #fff; font-size: 6px; padding: 2px 0; text-align: center;
+            color: #fff; font-size: 10px; padding: 4px 0; text-align: center;
             line-height: 1.2; word-wrap: break-word; pointer-events: none;
         }
         
@@ -87,14 +89,14 @@
         .cell.locked-style:hover { border-color: #ff0000; }
 
         .stage-cell {
-            flex: 0 0 130px; height: 80px; background-color: #222; border: 3px solid #808080;
+            flex: 0 0 260px; height: 160px; background-color: #222; border: 3px solid #808080;
             cursor: pointer; background-size: cover; background-position: center; 
             transition: transform 0.1s; position: relative; overflow: hidden;
         }
         .stage-cell:hover { border-color: #00ffff; transform: scale(1.05); z-index: 2;}
         .stage-name {
             position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.7);
-            color: #fff; font-size: 7px; padding: 4px 0; text-align: center;
+            color: #fff; font-size: 12px; padding: 6px 0; text-align: center;
         }
 
         /* OVERLAYS E ANIMAZIONI TESTO */
@@ -211,7 +213,6 @@
         <button class="win-btn" style="font-size: 16px; padding: 15px; margin-top: auto; margin-bottom: 50px;" onclick="finishGuestUnlock()">AWESOME!</button>
     </div>
 
-    <!-- Canvas con proporzioni Verticali per il 4:5 -->
     <canvas id="gameCanvas" width="800" height="1000"></canvas>
 </div>
 
@@ -382,7 +383,6 @@
         { name: 'FIESTA', bg: 'assets/mexico.webp', music: 'assets/fiesta.mp3' }
     ];
 
-    // VARIABILI DI STATO E PRESENTAZIONE
     let selectState = 0; 
     let mode = "SELECT"; 
     let p1Char = null; let cpuChar = null; let currentStage = null;
@@ -402,7 +402,7 @@
     let currentRound = 1; let p1Wins = 0; let cpuWins = 0;
 
     const SPRITE_SIZE = 290; 
-    const GROUND_Y = 900; // Aggiornato per la nuova altezza (1000)
+    const GROUND_Y = 900;
 
     let p1 = { x: 80, y: GROUND_Y, hp: 100, state: 'idle', frame: 0, dir: 1, vy: 0, timer: 0, deadTimer: 0 };
     let cpu = { x: 430, y: GROUND_Y, hp: 100, state: 'idle', frame: 0, dir: -1, vy: 0, timer: 0, deadTimer: 0 };
@@ -456,6 +456,10 @@
         selectState = 1;
         mode = "SELECT";
         hoverChar = enemiesList[0];
+        
+        // FIX: Resetta il background del canvas per impedire l'estensione dello sfondo alla selezione nemico
+        canvas.style.backgroundImage = 'none'; 
+        
         document.getElementById('selection-screen').style.display = 'flex';
         loadSelectionScreen();
     }
@@ -853,7 +857,7 @@
 
     function draw() {
         if (mode === "GUEST_UNLOCK") {
-            ctx.clearRect(0, 0, 800, 1000); // Adattato per altezza 1000
+            ctx.clearRect(0, 0, 800, 1000);
             
             if (guestPendingChar) {
                 let finalImg = getImage(getSpritePath(guestPendingChar.spriteId, 'idle'));
@@ -864,11 +868,11 @@
                     const sx = (frame % 5) * frameW; const sy = Math.floor(frame / 5) * frameH;
                     
                     ctx.save();
-                    let scale = 2.4; 
+                    let scale = 4.8; // Raddoppiato per il personaggio guest
                     let drawW = SPRITE_SIZE * scale;
                     let drawH = SPRITE_SIZE * scale;
                     
-                    ctx.translate(400, 150); // Spostato un po' più giù nel 4:5
+                    ctx.translate(400, 250); 
                     ctx.drawImage(finalImg, sx, sy, frameW, frameH, -drawW/2, 0, drawW, drawH);
                     ctx.restore();
                 }
@@ -882,8 +886,6 @@
             ctx.clearRect(0, 0, 800, 1000);
             presentationTimer++;
 
-            // Gestione dei tempi di animazione
-            if (presentationTimer === 120) { /* Suono corsa/walk opzionale */ }
             if (presentationTimer === 240) { playCharSfx(presentationChar.spriteId, 'attack'); }
 
             if (presentationTimer < 120) presentationAnim = 'idle';
@@ -902,16 +904,14 @@
                 const sx = (frame % 5) * frameW; const sy = Math.floor(frame / 5) * frameH;
 
                 ctx.save();
-                let scale = 3.5; // Molto grande per la presentazione
+                let scale = 4.0;
                 let drawW = SPRITE_SIZE * scale;
                 let drawH = SPRITE_SIZE * scale;
                 
-                // Centrato verticalmente nel nuovo formato 4:5 (altezza 1000)
                 ctx.translate(400, 500); 
                 ctx.drawImage(finalImg, sx, sy, frameW, frameH, -drawW/2, -drawH/2, drawW, drawH);
                 ctx.restore();
 
-                // Testo cinetico sopra
                 ctx.fillStyle = "#ffcc00"; ctx.font = "30px 'Press Start 2P'"; ctx.textAlign = "center";
                 ctx.shadowColor = "#000"; ctx.shadowOffsetX = 4; ctx.shadowOffsetY = 4;
                 ctx.fillText(presentationChar.name + " JOINS THE FIGHT!", 400, 200);
@@ -929,7 +929,23 @@
             
             let bgImg = getImage(bgSrc);
             if (bgImg.complete && bgImg.naturalWidth > 0) {
-                ctx.drawImage(bgImg, 0, 0, 800, 1000); // Adattato all'altezza
+                // FIX: Object Fit Cover matematico per non stretchare il background
+                let bgRatio = bgImg.naturalWidth / bgImg.naturalHeight;
+                let canvasRatio = 800 / 1000;
+                let drawW, drawH, drawX, drawY;
+                
+                if (bgRatio > canvasRatio) {
+                    drawH = 1000;
+                    drawW = bgImg.naturalWidth * (1000 / bgImg.naturalHeight);
+                    drawX = (800 - drawW) / 2;
+                    drawY = 0;
+                } else {
+                    drawW = 800;
+                    drawH = bgImg.naturalHeight * (800 / bgImg.naturalWidth);
+                    drawX = 0;
+                    drawY = (1000 - drawH) / 2;
+                }
+                ctx.drawImage(bgImg, drawX, drawY, drawW, drawH);
             } else {
                 ctx.fillStyle = selectState === 0 ? "#000080" : (selectState === 1 ? "#500000" : "#000000");
                 ctx.fillRect(0,0,800,1000);
@@ -939,13 +955,14 @@
                 if (hoverChar.isLocked) {
                     let anonimoImg = getImage('assets/anonimo.png');
                     if (anonimoImg.complete && anonimoImg.naturalWidth > 0) {
-                        let drawW = 256; let drawH = 256;
-                        let xCenter = selectState === 0 ? 200 : 600;
-                        let yPos = 200; // Abbassato un po' per il 4:5
+                        // FIX: Dimensioni raddoppiate per l'immagine "locked"
+                        let drawW = 512; let drawH = 512; 
+                        let xCenter = selectState === 0 ? 250 : 550;
+                        let yPos = 80;
                         ctx.drawImage(anonimoImg, xCenter - drawW/2, yPos, drawW, drawH);
                         
-                        ctx.fillStyle = "#ff0000"; ctx.font = "16px 'Press Start 2P'"; ctx.textAlign = "center";
-                        ctx.fillText("LOCKED", xCenter, yPos + drawH + 40);
+                        ctx.fillStyle = "#ff0000"; ctx.font = "24px 'Press Start 2P'"; ctx.textAlign = "center";
+                        ctx.fillText("LOCKED", xCenter, yPos + drawH + 30);
                     }
                 } 
                 else {
@@ -962,12 +979,13 @@
                         const sx = (frame % 5) * frameW; const sy = Math.floor(frame / 5) * frameH;
                         
                         ctx.save();
-                        let scale = 2.4; 
+                        // FIX: Raddoppiata la scala della figura sbloccata
+                        let scale = 4.8; 
                         let drawW = SPRITE_SIZE * scale;
                         let drawH = SPRITE_SIZE * scale;
                         
-                        let xAnchor = selectState === 0 ? 200 : 600;
-                        let yAnchor = 150; // Abbassato per il 4:5
+                        let xAnchor = selectState === 0 ? 250 : 550;
+                        let yAnchor = -100;
                         
                         ctx.translate(xAnchor, yAnchor);
                         
@@ -978,14 +996,15 @@
                         ctx.drawImage(finalImg, sx, sy, frameW, frameH, -drawW/2, 0, drawW, drawH);
                         ctx.restore();
                         
-                        ctx.fillStyle = "#fff"; ctx.font = "20px 'Press Start 2P'"; ctx.textAlign = "center";
-                        ctx.fillText(hoverChar.name, xAnchor, yAnchor + drawH + 40);
+                        ctx.fillStyle = "#fff"; ctx.font = "24px 'Press Start 2P'"; ctx.textAlign = "center";
+                        ctx.shadowColor = "#000"; ctx.shadowOffsetX = 3; ctx.shadowOffsetY = 3;
+                        ctx.fillText(hoverChar.name, xAnchor, yAnchor + drawH - 120);
+                        ctx.shadowColor = "transparent";
                     }
                 }
             }
         } 
         else if (mode !== "SELECT" && currentStage) {
-            // UI DELLA BATTAGLIA (Barre della vita riposizionate per altezza 1000 se serve, ma lasciate in alto vanno bene)
             ctx.fillStyle = "#444"; ctx.fillRect(45, 25, 310, 20); ctx.fillRect(445, 25, 310, 20);
             ctx.fillStyle = "red"; ctx.fillRect(50, 27, 300, 16); ctx.fillRect(450, 27, 300, 16);
             
@@ -998,14 +1017,12 @@
             ctx.fillText(p1Char.name, 50, 60);
             ctx.fillText(cpuChar.name, 750 - ctx.measureText(cpuChar.name).width, 60);
 
-            // Pallini round
             ctx.fillStyle = p1Wins >= 1 ? "#ffcc00" : "#444"; ctx.beginPath(); ctx.arc(55, 75, 5, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = p1Wins >= 2 ? "#ffcc00" : "#444"; ctx.beginPath(); ctx.arc(70, 75, 5, 0, Math.PI*2); ctx.fill();
             
             ctx.fillStyle = cpuWins >= 1 ? "#ffcc00" : "#444"; ctx.beginPath(); ctx.arc(745, 75, 5, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = cpuWins >= 2 ? "#ffcc00" : "#444"; ctx.beginPath(); ctx.arc(730, 75, 5, 0, Math.PI*2); ctx.fill();
 
-            // Timer centrale
             ctx.fillStyle = "#fff"; ctx.font = "30px 'Press Start 2P'";
             ctx.fillText(matchTimer, 400 - ctx.measureText(matchTimer).width/2, 50);
 
