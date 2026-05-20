@@ -65,7 +65,7 @@
         .scrolling-grid::-webkit-scrollbar-thumb { background: #ffcc00; border-radius: 4px; }
 
         .cell {
-            flex: 0 0 50px; height: 50px; background-color: #222; border: 3px solid #808080;
+            flex: 0 0 60px; height: 60px; background-color: #222; border: 3px solid #808080;
             cursor: pointer; image-rendering: pixelated; transition: transform 0.1s, border-color 0.1s;
             position: relative; overflow: hidden;
         }
@@ -73,8 +73,8 @@
         
         .cell-name {
             position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.7);
-            color: #fff; font-size: 5px; padding: 1px 0; text-align: center;
-            line-height: 1.1; word-wrap: break-word; pointer-events: none;
+            color: #fff; font-size: 6px; padding: 2px 0; text-align: center;
+            line-height: 1.2; word-wrap: break-word; pointer-events: none;
         }
         
         .cell.normal-style { background-size: 500% 500%; background-position: 0% 0%; }
@@ -386,7 +386,6 @@
     let currentStageHover = stages[0];
 
     let guestPendingChar = null;
-    let heroIntroStartTime = null;
 
     let matchTimer = 99; let framesCounter = 0;
     let currentRound = 1; let p1Wins = 0; let cpuWins = 0;
@@ -442,11 +441,14 @@
     function triggerGuestUnlock(c) {
         c.isLocked = false; 
         guestPendingChar = c; 
-        heroIntroStartTime = Date.now();
         
         mode = "GUEST_UNLOCK";
         document.getElementById('selection-screen').style.display = 'none';
         
+        canvas.style.backgroundImage = `url('assets/unlocked.gif')`;
+        canvas.style.backgroundSize = 'cover';
+        canvas.style.backgroundPosition = 'center';
+
         document.getElementById('guest-unlock-name').innerText = `"${c.name}"!`;
         
         const unlockContainer = document.getElementById('guest-unlock-container');
@@ -465,7 +467,6 @@
         p1Char = null; 
         cpuChar = null;
         hoverChar = heroes[0];
-        heroIntroStartTime = null;
         
         document.getElementById('selection-screen').style.display = 'flex';
         loadSelectionScreen(); 
@@ -808,39 +809,12 @@
         checkRoundEnd();
     }
 
-    function getHeroIntroState() {
-        if (!heroIntroStartTime) return 'idle';
-        
-        const elapsed = Date.now() - heroIntroStartTime;
-        const totalDuration = 3000; // 3 seconds
-        
-        if (elapsed >= totalDuration) {
-            return 'done';
-        }
-        
-        // 0-1s: idle, 1-2s: walk/run, 2-3s: attack
-        if (elapsed < 1000) return 'idle';
-        if (elapsed < 2000) return 'run';
-        return 'attack';
-    }
-
     function draw() {
         if (mode === "GUEST_UNLOCK") {
             ctx.clearRect(0, 0, 800, 450);
             
             if (guestPendingChar) {
-                const introState = getHeroIntroState();
-                
-                if (introState === 'done') {
-                    finishGuestUnlock();
-                    return;
-                }
-                
-                let finalImg = getImage(getSpritePath(guestPendingChar.spriteId, introState));
-                
-                if (!finalImg.complete || finalImg.naturalWidth === 0) {
-                    finalImg = getImage(getSpritePath(guestPendingChar.spriteId, 'idle'));
-                }
+                let finalImg = getImage(getSpritePath(guestPendingChar.spriteId, 'idle'));
                 
                 if (finalImg.complete && finalImg.naturalWidth > 0) {
                     const frameW = finalImg.width / 5; const frameH = finalImg.height / 5;
