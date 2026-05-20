@@ -35,9 +35,14 @@
         .win-btn:active { border-color: #808080 #fff #fff #808080; background: #a0a0a0; }
 
         #game-container {
-            position: relative; width: 100vw; height: calc(100vw * 9/16); 
-            max-width: 800px; max-height: 450px; background: #222; overflow: hidden;
+            position: relative; 
+            width: 100%; 
+            max-width: 600px;
+            aspect-ratio: 4 / 5; 
+            background: #222; overflow: hidden;
             border: 4px solid #c0c0c0;
+            margin: 0 auto;
+            box-sizing: border-box; 
         }
 
         canvas { 
@@ -45,7 +50,6 @@
             background-color: transparent; 
         }
 
-        /* SCHERMATE DI SELEZIONE OVERLAY */
         #selection-screen {
             position: absolute; inset: 0; 
             display: flex; flex-direction: column; align-items: center;
@@ -53,10 +57,9 @@
             background: transparent;
         }
 
-        /* SCROLLING ORIZZONTALE UNIFICATO */
         .scrolling-grid {
             display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
-            gap: 12px; width: 100%; padding: 15px 10px; box-sizing: border-box;
+            gap: 20px; width: 100%; padding: 20px 10px; box-sizing: border-box;
             background: rgba(0, 0, 0, 0.6); border-top: 3px solid #808080;
             -webkit-overflow-scrolling: touch;
         }
@@ -65,7 +68,7 @@
         .scrolling-grid::-webkit-scrollbar-thumb { background: #ffcc00; border-radius: 4px; }
 
         .cell {
-            flex: 0 0 60px; height: 60px; background-color: #222; border: 3px solid #808080;
+            flex: 0 0 120px; height: 120px; background-color: #222; border: 3px solid #808080;
             cursor: pointer; image-rendering: pixelated; transition: transform 0.1s, border-color 0.1s;
             position: relative; overflow: hidden;
         }
@@ -73,7 +76,7 @@
         
         .cell-name {
             position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.7);
-            color: #fff; font-size: 6px; padding: 2px 0; text-align: center;
+            color: #fff; font-size: 10px; padding: 4px 0; text-align: center;
             line-height: 1.2; word-wrap: break-word; pointer-events: none;
         }
         
@@ -82,17 +85,16 @@
         .cell.locked-style:hover { border-color: #ff0000; }
 
         .stage-cell {
-            flex: 0 0 130px; height: 80px; background-color: #222; border: 3px solid #808080;
+            flex: 0 0 260px; height: 160px; background-color: #222; border: 3px solid #808080;
             cursor: pointer; background-size: cover; background-position: center; 
             transition: transform 0.1s; position: relative; overflow: hidden;
         }
         .stage-cell:hover { border-color: #00ffff; transform: scale(1.05); z-index: 2;}
         .stage-name {
             position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.7);
-            color: #fff; font-size: 7px; padding: 4px 0; text-align: center;
+            color: #fff; font-size: 12px; padding: 6px 0; text-align: center;
         }
 
-        /* OVERLAYS E ANIMAZIONI TESTO */
         .overlay {
             position: absolute; inset: 0; background: rgba(0, 0, 0, 0.85);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -106,7 +108,6 @@
             visibility: hidden; font-weight: bold; pointer-events: none;
         }
 
-        /* Effetto Glitch per Sblocco Personaggio */
         @keyframes unlockAnim {
             0% { opacity: 1; text-shadow: 4px 0 red, -4px 0 blue; transform: scale(1) skewX(-15deg); }
             5% { opacity: 1; text-shadow: -4px 0 red, 4px 0 blue; transform: scale(1.1) skewX(15deg); }
@@ -121,12 +122,11 @@
             animation: unlockAnim 4s forwards;
         }
 
-        /* CONTROLLI MOBILE STILE CABINATO */
         #controls {
-            display: flex; justify-content: space-between; width: 100%; max-width: 800px;
+            display: flex; justify-content: space-between; width: 100%; max-width: 600px;
             padding: 15px 15px; box-sizing: border-box; background: #1a1a1a; 
             border-top: 4px solid #333; box-shadow: inset 0 10px 20px rgba(0,0,0,0.5);
-            visibility: hidden;
+            visibility: hidden; margin: 0 auto;
         }
 
         .d-pad {
@@ -199,7 +199,6 @@
         <button class="win-btn" style="font-size: 14px; padding: 10px;" onclick="resetToMenu()">CONTINUE</button>
     </div>
 
-    <!-- Schermata di Sblocco GUEST -->
     <div id="guest-unlock-screen" class="overlay" style="background: rgba(0,0,0,0.4); justify-content: flex-start; padding-top: 40px;">
         <div id="guest-unlock-container" style="opacity: 0;">
             <h2 style="color: #ffcc00; text-shadow: 2px 2px #000; font-size: 14px; margin-bottom: 10px;">YOU HAVE UNLOCKED GUEST:</h2>
@@ -208,7 +207,7 @@
         <button class="win-btn" style="font-size: 16px; padding: 15px; margin-top: auto; margin-bottom: 50px;" onclick="finishGuestUnlock()">AWESOME!</button>
     </div>
 
-    <canvas id="gameCanvas" width="800" height="450"></canvas>
+    <canvas id="gameCanvas" width="800" height="1000"></canvas>
 </div>
 
 <div id="controls">
@@ -227,7 +226,6 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
-    // CACHE ENGINE
     const imageCache = {};
     function getImage(src) {
         if (!imageCache[src]) {
@@ -236,10 +234,9 @@
         return imageCache[src];
     }
 
-    // MAPPER INTELLIGENTE NOMI FILE SPRITES
     function getSpritePath(spriteId, state) {
         let fileState = state;
-        const walkChars = ['Daykoda', 'RiccardoSala', 'SilentBob', 'SickBudd', 'EnricoGabrielli', 'JackTheSmoker', 'FreshMula', 'CarloCorallo', 'Ghemon', 'WilliePeyote', 'Mezzosangue'];
+        const walkChars = ['Daykoda', 'RiccardoSala', 'SilentBob', 'SickBudd', 'EnricoGabrielli', 'JackTheSmoker', 'FreshMula', 'CarloCorallo', 'Ghemon', 'WilliePeyote', 'Mezzosangue', 'carma2', 'ferraz2', 'nan2', 'falcon2', 'mauri2'];
         const punchChars = ['Daykoda', 'SilentBob', 'SickBudd', 'JackTheSmoker', 'Ghemon', 'WilliePeyote', 'Mezzosangue'];
         const kickChars = ['FreshMula', 'CarloCorallo'];
         
@@ -327,7 +324,6 @@
         }
     }
 
-    // LISTA ASSETS EROI DEFINITIVA
     const heroes = [
         { spriteId: 'carma2', name: 'CARMA', isLocked: false },
         { spriteId: 'ferraz2', name: 'FERRAZ', isLocked: false },
@@ -387,11 +383,17 @@
 
     let guestPendingChar = null;
 
+    const presentationHeroes = ['carma2', 'ferraz2', 'nan2', 'falcon2', 'mauri2'];
+    let presentationChar = null;
+    let presentationStage = null;
+    let presentationAnim = 'idle';
+    let presentationTimer = 0;
+
     let matchTimer = 99; let framesCounter = 0;
     let currentRound = 1; let p1Wins = 0; let cpuWins = 0;
 
     const SPRITE_SIZE = 290; 
-    const GROUND_Y = 450; 
+    const GROUND_Y = 900;
 
     let p1 = { x: 80, y: GROUND_Y, hp: 100, state: 'idle', frame: 0, dir: 1, vy: 0, timer: 0, deadTimer: 0 };
     let cpu = { x: 430, y: GROUND_Y, hp: 100, state: 'idle', frame: 0, dir: -1, vy: 0, timer: 0, deadTimer: 0 };
@@ -421,15 +423,54 @@
     let lastCellClicked = null;
     let clickTimeout = null;
 
+    function startPresentation(c) {
+        presentationChar = c;
+        presentationStage = stages[Math.floor(Math.random() * stages.length)];
+        mode = "PRESENTATION";
+        document.getElementById('selection-screen').style.display = 'none';
+
+        canvas.style.backgroundImage = `url('${presentationStage.bg}')`;
+        if (presentationStage.zoom) {
+            canvas.style.backgroundSize = `${presentationStage.zoom * 100}%`;
+        } else {
+            canvas.style.backgroundSize = 'cover';
+        }
+        canvas.style.backgroundPosition = 'center';
+
+        presentationAnim = 'idle';
+        presentationTimer = 0;
+        playCharSfx(c.spriteId, 'select');
+    }
+
+    function endPresentation() {
+        // TORNIA ALLA SCHERMATA INIZIALE EROE
+        p1Char = null;
+        selectState = 0;
+        mode = "SELECT";
+        hoverChar = presentationChar;
+        
+        canvas.style.backgroundImage = 'none'; 
+        
+        document.getElementById('selection-screen').style.display = 'flex';
+        loadSelectionScreen();
+    }
+
     function handleCharacterDoubleTap(c) {
         if (c.isLocked) {
             triggerGuestUnlock(c);
         } else {
             if (selectState === 0) {
-                p1Char = c;
-                selectState = 1;
-                hoverChar = enemiesList[0];
-                loadSelectionScreen();
+                // SE E' LA PRIMA VOLTA CHE CLICCHI, PARTE LA PRESENTAZIONE
+                if (presentationHeroes.includes(c.spriteId) && !c.hasPresented) {
+                    c.hasPresented = true;
+                    startPresentation(c);
+                } else {
+                    // LA SECONDA VOLTA LO SELEZIONA PER COMBATTERE
+                    p1Char = c;
+                    selectState = 1;
+                    hoverChar = enemiesList[0];
+                    loadSelectionScreen();
+                }
             } else if (selectState === 1) {
                 cpuChar = c;
                 selectState = 2;
@@ -490,7 +531,6 @@
             list.forEach(c => {
                 const d = document.createElement('div');
                 
-                // Creazione della label col nome sotto al quadrato
                 const labelName = document.createElement('div');
                 labelName.className = 'cell-name';
                 labelName.innerText = c.isLocked ? 'LOCKED' : c.name;
@@ -811,7 +851,7 @@
 
     function draw() {
         if (mode === "GUEST_UNLOCK") {
-            ctx.clearRect(0, 0, 800, 450);
+            ctx.clearRect(0, 0, 800, 1000);
             
             if (guestPendingChar) {
                 let finalImg = getImage(getSpritePath(guestPendingChar.spriteId, 'idle'));
@@ -822,11 +862,11 @@
                     const sx = (frame % 5) * frameW; const sy = Math.floor(frame / 5) * frameH;
                     
                     ctx.save();
-                    let scale = 2.4; 
+                    let scale = 4.8; 
                     let drawW = SPRITE_SIZE * scale;
                     let drawH = SPRITE_SIZE * scale;
                     
-                    ctx.translate(400, -40);
+                    ctx.translate(400, 250); 
                     ctx.drawImage(finalImg, sx, sy, frameW, frameH, -drawW/2, 0, drawW, drawH);
                     ctx.restore();
                 }
@@ -835,7 +875,47 @@
             return; 
         }
 
-        ctx.clearRect(0, 0, 800, 450);
+        // LOGICA SCHERMATA DI PRESENTAZIONE DI 3 SECONDI (180 frame)
+        if (mode === "PRESENTATION") {
+            ctx.clearRect(0, 0, 800, 1000);
+            presentationTimer++;
+
+            if (presentationTimer === 120) { playCharSfx(presentationChar.spriteId, 'attack'); }
+
+            if (presentationTimer < 60) presentationAnim = 'idle';        // 0-1 secondo: idle
+            else if (presentationTimer < 120) presentationAnim = 'run';   // 1-2 secondi: run
+            else if (presentationTimer < 180) presentationAnim = 'attack';// 2-3 secondi: attack
+            else { endPresentation(); return; }
+
+            let finalImg = getImage(getSpritePath(presentationChar.spriteId, presentationAnim));
+            if (!finalImg.complete || finalImg.naturalWidth === 0) {
+                finalImg = getImage(getSpritePath(presentationChar.spriteId, 'idle'));
+            }
+
+            if (finalImg.complete && finalImg.naturalWidth > 0) {
+                const frameW = finalImg.width / 5; const frameH = finalImg.height / 5;
+                const frame = Math.floor(Date.now() / 50) % 25;
+                const sx = (frame % 5) * frameW; const sy = Math.floor(frame / 5) * frameH;
+
+                ctx.save();
+                let scale = 4.0;
+                let drawW = SPRITE_SIZE * scale;
+                let drawH = SPRITE_SIZE * scale;
+                
+                ctx.translate(400, 500); 
+                ctx.drawImage(finalImg, sx, sy, frameW, frameH, -drawW/2, -drawH/2, drawW, drawH);
+                ctx.restore();
+
+                ctx.fillStyle = "#ffcc00"; ctx.font = "30px 'Press Start 2P'"; ctx.textAlign = "center";
+                ctx.shadowColor = "#000"; ctx.shadowOffsetX = 4; ctx.shadowOffsetY = 4;
+                ctx.fillText(presentationChar.name + " JOINS THE FIGHT!", 400, 200);
+                ctx.shadowColor = "transparent";
+            }
+            requestAnimationFrame(draw);
+            return;
+        }
+
+        ctx.clearRect(0, 0, 800, 1000);
 
         if (mode === "SELECT") {
             let bgSrc = selectState === 0 ? 'assets/bkg1.png' : (selectState === 1 ? 'assets/bkg2.png' : 'assets/bkg3.png');
@@ -843,27 +923,41 @@
             
             let bgImg = getImage(bgSrc);
             if (bgImg.complete && bgImg.naturalWidth > 0) {
-                ctx.drawImage(bgImg, 0, 0, 800, 450);
+                let bgRatio = bgImg.naturalWidth / bgImg.naturalHeight;
+                let canvasRatio = 800 / 1000;
+                let drawW, drawH, drawX, drawY;
+                
+                if (bgRatio > canvasRatio) {
+                    drawH = 1000;
+                    drawW = bgImg.naturalWidth * (1000 / bgImg.naturalHeight);
+                    drawX = (800 - drawW) / 2;
+                    drawY = 0;
+                } else {
+                    drawW = 800;
+                    drawH = bgImg.naturalHeight * (800 / bgImg.naturalWidth);
+                    drawX = 0;
+                    drawY = (1000 - drawH) / 2;
+                }
+                ctx.drawImage(bgImg, drawX, drawY, drawW, drawH);
             } else {
                 ctx.fillStyle = selectState === 0 ? "#000080" : (selectState === 1 ? "#500000" : "#000000");
-                ctx.fillRect(0,0,800,450);
+                ctx.fillRect(0,0,800,1000);
             }
 
             if ((selectState === 0 || selectState === 1) && hoverChar) {
                 if (hoverChar.isLocked) {
                     let anonimoImg = getImage('assets/anonimo.png');
                     if (anonimoImg.complete && anonimoImg.naturalWidth > 0) {
-                        let drawW = 256; let drawH = 256;
-                        let xCenter = selectState === 0 ? 200 : 600;
+                        let drawW = 512; let drawH = 512; 
+                        let xCenter = selectState === 0 ? 250 : 550;
                         let yPos = 80;
                         ctx.drawImage(anonimoImg, xCenter - drawW/2, yPos, drawW, drawH);
                         
-                        ctx.fillStyle = "#ff0000"; ctx.font = "16px 'Press Start 2P'"; ctx.textAlign = "center";
-                        ctx.fillText("LOCKED", xCenter, yPos + drawH + 40);
+                        ctx.fillStyle = "#ff0000"; ctx.font = "24px 'Press Start 2P'"; ctx.textAlign = "center";
+                        ctx.fillText("LOCKED", xCenter, yPos + drawH + 30);
                     }
                 } 
                 else {
-                    // Qui adesso è bloccato fisso sull'attacco
                     let drawState = 'attack';
                     let finalImg = getImage(getSpritePath(hoverChar.spriteId, drawState));
                     
@@ -877,12 +971,12 @@
                         const sx = (frame % 5) * frameW; const sy = Math.floor(frame / 5) * frameH;
                         
                         ctx.save();
-                        let scale = 2.4; 
+                        let scale = 4.8; 
                         let drawW = SPRITE_SIZE * scale;
                         let drawH = SPRITE_SIZE * scale;
                         
-                        let xAnchor = selectState === 0 ? 200 : 600;
-                        let yAnchor = -40;
+                        let xAnchor = selectState === 0 ? 250 : 550;
+                        let yAnchor = -100;
                         
                         ctx.translate(xAnchor, yAnchor);
                         
@@ -893,33 +987,35 @@
                         ctx.drawImage(finalImg, sx, sy, frameW, frameH, -drawW/2, 0, drawW, drawH);
                         ctx.restore();
                         
-                        ctx.fillStyle = "#fff"; ctx.font = "16px 'Press Start 2P'"; ctx.textAlign = "center";
-                        ctx.fillText(hoverChar.name, xAnchor, 420);
+                        ctx.fillStyle = "#fff"; ctx.font = "24px 'Press Start 2P'"; ctx.textAlign = "center";
+                        ctx.shadowColor = "#000"; ctx.shadowOffsetX = 3; ctx.shadowOffsetY = 3;
+                        ctx.fillText(hoverChar.name, xAnchor, yAnchor + drawH - 120);
+                        ctx.shadowColor = "transparent";
                     }
                 }
             }
         } 
         else if (mode !== "SELECT" && currentStage) {
-            ctx.fillStyle = "#444"; ctx.fillRect(45, 15, 310, 20); ctx.fillRect(445, 15, 310, 20);
-            ctx.fillStyle = "red"; ctx.fillRect(50, 17, 300, 16); ctx.fillRect(450, 17, 300, 16);
+            ctx.fillStyle = "#444"; ctx.fillRect(45, 25, 310, 20); ctx.fillRect(445, 25, 310, 20);
+            ctx.fillStyle = "red"; ctx.fillRect(50, 27, 300, 16); ctx.fillRect(450, 27, 300, 16);
             
             ctx.fillStyle = "yellow"; 
             let p1hp = Math.max(0, p1.hp); let cpuhp = Math.max(0, cpu.hp);
-            ctx.fillRect(50, 17, p1hp * 3, 16); 
-            ctx.fillRect(450 + (300 - cpuhp * 3), 17, cpuhp * 3, 16);
+            ctx.fillRect(50, 27, p1hp * 3, 16); 
+            ctx.fillRect(450 + (300 - cpuhp * 3), 27, cpuhp * 3, 16);
 
             ctx.fillStyle = "#fff"; ctx.font = "12px 'Press Start 2P'";
-            ctx.fillText(p1Char.name, 50, 48);
-            ctx.fillText(cpuChar.name, 750 - ctx.measureText(cpuChar.name).width, 48);
+            ctx.fillText(p1Char.name, 50, 60);
+            ctx.fillText(cpuChar.name, 750 - ctx.measureText(cpuChar.name).width, 60);
 
-            ctx.fillStyle = p1Wins >= 1 ? "#ffcc00" : "#444"; ctx.beginPath(); ctx.arc(55, 60, 5, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = p1Wins >= 2 ? "#ffcc00" : "#444"; ctx.beginPath(); ctx.arc(70, 60, 5, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = p1Wins >= 1 ? "#ffcc00" : "#444"; ctx.beginPath(); ctx.arc(55, 75, 5, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = p1Wins >= 2 ? "#ffcc00" : "#444"; ctx.beginPath(); ctx.arc(70, 75, 5, 0, Math.PI*2); ctx.fill();
             
-            ctx.fillStyle = cpuWins >= 1 ? "#ffcc00" : "#444"; ctx.beginPath(); ctx.arc(745, 60, 5, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = cpuWins >= 2 ? "#ffcc00" : "#444"; ctx.beginPath(); ctx.arc(730, 60, 5, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = cpuWins >= 1 ? "#ffcc00" : "#444"; ctx.beginPath(); ctx.arc(745, 75, 5, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = cpuWins >= 2 ? "#ffcc00" : "#444"; ctx.beginPath(); ctx.arc(730, 75, 5, 0, Math.PI*2); ctx.fill();
 
-            ctx.fillStyle = "#fff"; ctx.font = "24px 'Press Start 2P'";
-            ctx.fillText(matchTimer, 400 - ctx.measureText(matchTimer).width/2, 35);
+            ctx.fillStyle = "#fff"; ctx.font = "30px 'Press Start 2P'";
+            ctx.fillText(matchTimer, 400 - ctx.measureText(matchTimer).width/2, 50);
 
             drawFighter(p1, p1Char.spriteId);
             drawFighter(cpu, cpuChar.spriteId);
