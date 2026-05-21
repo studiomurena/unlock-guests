@@ -67,7 +67,6 @@
         .scrolling-grid::-webkit-scrollbar-track { background: #000; }
         .scrolling-grid::-webkit-scrollbar-thumb { background: #ffcc00; border-radius: 4px; }
 
-        /* CALIBRATO PER FAR ENTRARE I PRIMI 5 QUADRATI IN MOBILE */
         .cell {
             flex: 0 0 62px; height: 62px; background-color: #222; border: 3px solid #808080;
             cursor: pointer; image-rendering: pixelated; transition: transform 0.1s, border-color 0.1s;
@@ -85,7 +84,6 @@
         .cell.locked-style { background-size: cover; background-position: center; border-color: #880000; }
         .cell.locked-style:hover { border-color: #ff0000; }
 
-        /* SCALATI PER RESTARE PROPORZIONATI AGLI EROI (NON ECCESSIVI) */
         .stage-cell {
             flex: 0 0 140px; height: 90px; background-color: #222; border: 3px solid #808080;
             cursor: pointer; background-size: cover; background-position: center; 
@@ -389,7 +387,10 @@
     let presentationChar = null;
     let presentationStage = null;
     let presentationAnim = 'idle';
-    let presentationTimer = 0;
+    
+    // Timer legati al tempo reale (millisecondi) per evitare che i 120Hz sfalsino la durata
+    let presentationStartTime = 0;
+    let presentationAudioPlayed = false;
 
     let matchTimer = 99; let framesCounter = 0;
     let currentRound = 1; let p1Wins = 0; let cpuWins = 0;
@@ -440,12 +441,12 @@
         canvas.style.backgroundPosition = 'center';
 
         presentationAnim = 'idle';
-        presentationTimer = 0;
+        presentationStartTime = Date.now();
+        presentationAudioPlayed = false;
         playCharSfx(c.spriteId, 'select');
     }
 
     function endPresentation() {
-        // TORNIA ALLA SCHERMATA INIZIALE EROE
         p1Char = null;
         selectState = 0;
         mode = "SELECT";
@@ -462,12 +463,10 @@
             triggerGuestUnlock(c);
         } else {
             if (selectState === 0) {
-                // SE E' LA PRIMA VOLTA CHE CLICCHI, PARTE LA PRESENTAZIONE
                 if (presentationHeroes.includes(c.spriteId) && !c.hasPresented) {
                     c.hasPresented = true;
                     startPresentation(c);
                 } else {
-                    // LA SECONDA VOLTA LO SELEZIONA PER COMBATTERE
                     p1Char = c;
                     selectState = 1;
                     hoverChar = enemiesList[0];
@@ -877,20 +876,24 @@
             return; 
         }
 
-        // LOGICA SCHERMATA DI PRESENTAZIONE DI 4 SECONDI (240 frame)
+        // LOGICA SCHERMATA DI PRESENTAZIONE (TEMPO REALE IN MILLISECONDI)
         if (mode === "PRESENTATION") {
             ctx.clearRect(0, 0, 800, 1000);
-            presentationTimer++;
+            
+            let elapsed = Date.now() - presentationStartTime;
 
-            if (presentationTimer === 160) { playCharSfx(presentationChar.spriteId, 'attack'); }
+            // Trigger audio d'attacco a ~2.66 secondi
+            if (elapsed >= 2666 && !presentationAudioPlayed) { 
+                playCharSfx(presentationChar.spriteId, 'attack'); 
+                presentationAudioPlayed = true;
+            }
 
-            if (presentationTimer < 80) presentationAnim = 'idle';        // 0-1.33 secondi: idle
-            else if (presentationTimer < 160) presentationAnim = 'run';   // 1.33-2.66 secondi: run
-            else if (presentationTimer < 240) presentationAnim = 'attack';// 2.66-4 secondi: attack
+            if (elapsed < 1333) presentationAnim = 'idle';        // 0 - 1.33 secondi
+            else if (elapsed < 2666) presentationAnim = 'run';    // 1.33 - 2.66 secondi
+            else if (elapsed < 4000) presentationAnim = 'attack'; // 2.66 - 4.00 secondi
             else { 
                 endPresentation(); 
-                // FIX: Richiede il frame successivo per far ripartire il rendering del menu!
-                requestAnimationFrame(draw); 
+                requestAnimationFrame(draw); // FIX: Previene il freeze dello schermo nero
                 return; 
             }
 
