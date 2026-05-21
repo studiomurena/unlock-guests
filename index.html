@@ -59,7 +59,7 @@
 
         .scrolling-grid {
             display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
-            gap: 20px; width: 100%; padding: 20px 10px; box-sizing: border-box;
+            gap: 8px; width: 100%; padding: 15px 10px; box-sizing: border-box;
             background: rgba(0, 0, 0, 0.6); border-top: 3px solid #808080;
             -webkit-overflow-scrolling: touch;
         }
@@ -67,8 +67,9 @@
         .scrolling-grid::-webkit-scrollbar-track { background: #000; }
         .scrolling-grid::-webkit-scrollbar-thumb { background: #ffcc00; border-radius: 4px; }
 
+        /* CALIBRATO PER FAR ENTRARE I PRIMI 5 QUADRATI IN MOBILE */
         .cell {
-            flex: 0 0 120px; height: 120px; background-color: #222; border: 3px solid #808080;
+            flex: 0 0 62px; height: 62px; background-color: #222; border: 3px solid #808080;
             cursor: pointer; image-rendering: pixelated; transition: transform 0.1s, border-color 0.1s;
             position: relative; overflow: hidden;
         }
@@ -76,7 +77,7 @@
         
         .cell-name {
             position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.7);
-            color: #fff; font-size: 10px; padding: 4px 0; text-align: center;
+            color: #fff; font-size: 6px; padding: 3px 0; text-align: center;
             line-height: 1.2; word-wrap: break-word; pointer-events: none;
         }
         
@@ -84,15 +85,16 @@
         .cell.locked-style { background-size: cover; background-position: center; border-color: #880000; }
         .cell.locked-style:hover { border-color: #ff0000; }
 
+        /* SCALATI PER RESTARE PROPORZIONATI AGLI EROI (NON ECCESSIVI) */
         .stage-cell {
-            flex: 0 0 260px; height: 160px; background-color: #222; border: 3px solid #808080;
+            flex: 0 0 140px; height: 90px; background-color: #222; border: 3px solid #808080;
             cursor: pointer; background-size: cover; background-position: center; 
             transition: transform 0.1s; position: relative; overflow: hidden;
         }
         .stage-cell:hover { border-color: #00ffff; transform: scale(1.05); z-index: 2;}
         .stage-name {
             position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.7);
-            color: #fff; font-size: 12px; padding: 6px 0; text-align: center;
+            color: #fff; font-size: 8px; padding: 5px 0; text-align: center;
         }
 
         .overlay {
@@ -875,17 +877,22 @@
             return; 
         }
 
-        // LOGICA SCHERMATA DI PRESENTAZIONE DI 3 SECONDI (180 frame)
+        // LOGICA SCHERMATA DI PRESENTAZIONE DI 4 SECONDI (240 frame)
         if (mode === "PRESENTATION") {
             ctx.clearRect(0, 0, 800, 1000);
             presentationTimer++;
 
-            if (presentationTimer === 120) { playCharSfx(presentationChar.spriteId, 'attack'); }
+            if (presentationTimer === 160) { playCharSfx(presentationChar.spriteId, 'attack'); }
 
-            if (presentationTimer < 60) presentationAnim = 'idle';        // 0-1 secondo: idle
-            else if (presentationTimer < 120) presentationAnim = 'run';   // 1-2 secondi: run
-            else if (presentationTimer < 180) presentationAnim = 'attack';// 2-3 secondi: attack
-            else { endPresentation(); return; }
+            if (presentationTimer < 80) presentationAnim = 'idle';        // 0-1.33 secondi: idle
+            else if (presentationTimer < 160) presentationAnim = 'run';   // 1.33-2.66 secondi: run
+            else if (presentationTimer < 240) presentationAnim = 'attack';// 2.66-4 secondi: attack
+            else { 
+                endPresentation(); 
+                // FIX: Richiede il frame successivo per far ripartire il rendering del menu!
+                requestAnimationFrame(draw); 
+                return; 
+            }
 
             let finalImg = getImage(getSpritePath(presentationChar.spriteId, presentationAnim));
             if (!finalImg.complete || finalImg.naturalWidth === 0) {
